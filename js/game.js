@@ -78,7 +78,7 @@
 
   function dirDoc() {
     const lines = [];
-    for (let i = 0; i <= S.day; i++) DAYS[i].directives.forEach(d => lines.push({ id: d.id, k: null, v: d.t, fresh: i === S.day }));
+    for (let i = 0; i <= S.day; i++) if ((DAYS[i].act || 1) === (day().act || 1)) DAYS[i].directives.forEach(d => lines.push({ id: d.id, k: null, v: d.t, fresh: i === S.day }));
     return { id: 'dir', kind: 'dir', title: 'Памятка уполномоченного', sub: 'для служебного пользования', lines };
   }
   function visibleDocs(id) {
@@ -108,7 +108,7 @@
           <button class="btn" data-act="new">Новая игра</button>
         </div>
       </div>
-      <div class="title-foot">Пролог и акт первый · 1934–1936${DBG ? ' · режим отладки (F2)' : ''}</div>
+      <div class="title-foot">Пролог, акты первый и второй · 1934–1937${DBG ? ' · режим отладки (F2)' : ''}</div>
     </div>`;
   }
 
@@ -141,7 +141,7 @@
     ['Считайте время', `Рабочий день — с 9:00 до 18:00 на все папки. Удачная сверка стоит ${COST.hit} минут. Промах — ${COST.miss}; если одна из строк ещё пригодится с другой бумагой — ${COST.hit}. После 18:00 сверять нельзя, можно только подшивать и подписывать.`, 'Тыкать наугад дорого. Сначала читайте, потом сверяйте.'],
     ['Запрашивайте недостающее', 'Под справкой бывают «Запросы»: передопрос, справка, изъятие. Запрос стоит от 45 минут до часа с четвертью и приносит новую бумагу. Её тоже надо сверить с остальными.', 'Часть фактов без запроса не установить.'],
     ['Выберите постановление', `Справа отметьте решение и подшейте к нему факты из справки кнопкой «подшить». В бланке ${MAXATT} строки для оснований. Прямая улика весит больше косвенной.`, 'Постановление читает начальник. Решение без оснований он сочтёт необоснованным.'],
-    ['Уберите противоречия', 'Если в справке осталась запись, которая противоречит выбранному решению, кнопка «Подписать» не работает. Измените решение или вычеркните запись.', 'С противоречием в справке постановление не утвердят.'],
+    ['Уберите противоречия', 'Запись, которая противоречит выбранному решению, подсвечивается в справке, и «Подписать» не работает. Нажмите у этой записи «вычеркнуть» — или измените решение. Вычеркнутое можно восстановить.', 'С противоречием в справке постановление не утвердят.'],
     ['Подпишите и сдайте', 'После подписи приходит резолюция начальника и меняется «Доверие руководства» наверху. Упадёт до нуля — уволят. Вечером приносят газету: в ней то, что вышло из ваших постановлений. Всё подписанное лежит в «Картотеке».', 'По газете и картотеке видно, чем кончилось каждое дело.'],
   ];
   function guideHTML() {
@@ -172,7 +172,7 @@
     const d = day();
     app.innerHTML = `<div class="desk">
       <header class="bar">
-        <div class="bar-l"><b>Студенецкое РО НКВД</b><span>${esc(d.date)}</span></div>
+        <div class="bar-l"><b>${esc(d.office || 'Студенецкое РО НКВД')}</b><span>${esc(d.date)}</span></div>
         <div class="bar-c"><span class="clock" id="clock"></span><span class="trust" id="trust"></span></div>
         <div class="bar-r"><button data-act="cards">Картотека</button><button data-act="papers">Газеты</button><button data-act="menu">Меню</button></div>
       </header>
@@ -206,7 +206,7 @@
     if (allDone()) h += '<button class="btn wide" data-act="endday">Сдать дела. Конец дня</button>';
     const note = (S.cur && !rt(S.cur).verdict && CASES[S.cur].note) || d.note;
     h += `<div class="sticky">${esc(note)}</div>`;
-    if (S.trust <= 2 && !allDone()) h += `<div class="sticky warnnote">Ломов спрашивал у Зинаиды Павловны, где лежат обходные листы. Про тебя спрашивал. Ещё одна бумага ему поперёк — и стол освободишь. — И. С.</div>`;
+    if (S.trust <= 2 && !allDone()) h += `<div class="sticky warnnote">${esc(d.warn || 'Ломов спрашивал у Зинаиды Павловны, где лежат обходные листы. Про тебя спрашивал. Ещё одна бумага ему поперёк — и стол освободишь. — И. С.')}</div>`;
     $('#inbox').innerHTML = h;
   }
 
@@ -290,8 +290,12 @@
     const b = $('.sv-btn', sf); if (b) { b.classList.toggle('on', on); b.classList.toggle('pulse', !S.flags.includes('tut_sv')); }
     const map = {};
     if (DBG) cs.pairs.forEach(p => [p.a, p.b].forEach(k => { (map[k] = map[k] || []).includes(p.f) || map[k].push(p.f); }));
+    /* отладка: у выбранной строки подсвечиваются все строки, с которыми она сводится */
+    const mate = {};
+    if (DBG && on && ui.sel) cs.pairs.forEach(p => { if (p.a === ui.sel) mate[p.b] = 1; if (p.b === ui.sel) mate[p.a] = 1; });
     sf.querySelectorAll('.ln').forEach(el => {
       const k = el.dataset.k;
+      el.classList.toggle('dbgp', !!mate[k]);
       el.classList.toggle('sel', k === ui.sel);
       el.classList.toggle('hit', c.hits.includes(k));
       el.classList.toggle('dbgl', !!map[k]);
@@ -312,7 +316,7 @@
       if (!st) btn += `<button data-act="attach" data-arg="${id}"${!at && live(c).length >= MAXATT ? ' class="full"' : ''}>${at ? 'снять' : 'подшить'}</button>`;
       if (bad || st) btn += `<button class="bx" data-act="strike" data-arg="${id}">${st ? 'восстановить' : 'вычеркнуть'}</button>`;
     }
-    return `<li class="${fd.kind}${st ? ' struck' : ''}${at ? ' att' : ''}${bad ? ' need' : ''}"><span class="tag">${tag}${at ? ' · подшито к постановлению' : ''}${st ? ' · вычеркнуто' : ''}</span><span class="ft">${esc(fd.t)}</span>${btn ? `<span class="fa">${btn}</span>` : ''}</li>`;
+    return `<li class="${fd.kind}${st ? ' struck' : ''}${at ? ' att' : ''}${bad ? ' need' : ''}"><span class="tag">${tag}${at ? ' · подшито к постановлению' : ''}${st ? ' · вычеркнуто' : ''}</span><span class="ft">${T(fd.t)}</span>${btn ? `<span class="fa">${btn}</span>` : ''}</li>`;
   }
 
   function renderSide() {
@@ -337,8 +341,8 @@
     const open = conf.filter(f => !c.struck.includes(f));
     const natt = live(c).length;
     const reqs = (cs.requests || []).filter(r => !c.unlocked.includes(r.doc)).map(r => {
-      const late = timeLeft() < r.cost + COST.hit;
-      return `<button class="req" data-act="req" data-arg="${r.id}" ${late ? 'disabled' : ''}><i>${late ? 'не успеть' : hm(r.cost)}</i><b>${esc(r.label)}</b>${r.hint ? `<span>${esc(r.hint)}</span>` : ''}</button>`;
+      const gone = r.if && !r.if(S), late = timeLeft() < r.cost + COST.hit, hint = gone ? r.off : r.hint;
+      return `<button class="req${gone ? ' gone' : ''}${r.manual ? ' own' : ''}" data-act="req" data-arg="${r.id}" ${late || gone ? 'disabled' : ''}><i>${gone ? 'поздно' : late ? 'не успеть' : hm(r.cost)}</i><b>${T(r.label)}</b>${hint ? `<span>${T(hint)}</span>` : ''}</button>`;
     }).join('');
     const vs = cs.verdicts.map(x => `<button class="vopt${x.id === ui.verdict ? ' on' : ''}" data-act="pickv" data-arg="${x.id}"><s></s><span>${esc(x.label)}</span></button>`).join('');
     let status = '';
@@ -375,14 +379,20 @@
     if (p) {
       c.found.push(p.f); c.hits.push(a, b); spend(COST.hit); snd('hit');
       const fd = cs.findings[p.f];
-      toast((fd.kind === 'ex' ? 'Расхождение. ' : 'Сходится. ') + fd.t + ' Записано в справку — можно подшить к постановлению.', fd.kind);
+      toast((fd.kind === 'ex' ? 'В пользу обвиняемого. ' : 'Уличает. ') + fill(fd.t) + ' Записано в справку — можно подшить к постановлению.', fd.kind);
     } else {
-      /* «тепло»: хотя бы одна из строк ещё участвует в ненайденной связке */
-      const warm = cs.pairs.some(x => !c.found.includes(x.f) && [x.a, x.b].some(k => k === a || k === b));
+      /* «тепло»: хотя бы одна из строк ещё участвует в ненайденной связке;
+         «об одном»: обе строки ведут к одному ненайденному факту, но друг с другом его не устанавливают */
+      const left = cs.pairs.filter(x => !c.found.includes(x.f));
+      const inF = (f, k) => left.some(x => x.f === f && (x.a === k || x.b === k));
+      const same = left.some(x => inF(x.f, a) && inF(x.f, b));
+      const warm = same || left.some(x => [x.a, x.b].some(k => k === a || k === b));
       spend(warm ? COST.hit : COST.miss); snd('miss');
-      toast(warm
-        ? 'Эти две строки между собой не связаны. Но одна из них ещё пригодится — с другой бумагой. Потеряно ' + COST.hit + ' минут.'
-        : 'Ни расхождений, ни связи не усматривается. Потеряно ' + COST.miss + ' минут.', 'bad');
+      toast(same
+        ? 'Обе строки об одном и том же, но друг с другом они ничего не устанавливают. Сверьте каждую с третьей бумагой. Потеряно ' + COST.hit + ' минут.'
+        : warm
+          ? 'Из этих двух строк вывода не сделать. Но одна из них ещё пригодится — с другой бумагой. Потеряно ' + COST.hit + ' минут.'
+          : 'Ни расхождений, ни связи не усматривается. Потеряно ' + COST.miss + ' минут.', 'bad');
     }
     save(); refresh();
   }
@@ -398,7 +408,7 @@
         c.refused = 1; ui.verdict = null; save(); snd('knock');
         openModal(`<div class="sheet post"><div class="post-h">Постановление</div><div class="post-sub">по делу № ${cs.no} — возвращено</div>
           <p>${esc(v.label)}</p>
-          <div class="resol big"><i>${esc(v.refuseText)}</i><span>— Ломов</span></div>
+          <div class="resol big"><i>${esc(v.refuseText)}</i><span>— ${esc(day().boss || 'Ломов')}</span></div>
           <div class="tdelta${S.trust < was0 ? ' down' : ''}">Доверие руководства: ${was0} → ${S.trust}</div>
           <button class="btn" data-act="close">Вернуться к делу</button></div>`);
         refresh();
@@ -416,34 +426,35 @@
     c.struck.forEach(f => { if (cs.findings[f].kind === 'ex') S.viol++; else S.cover++; });
     /* осудил, не проверив: оправдание в папке было, но сверкой не найдено */
     if ((v.conflicts || []).some(f => cs.findings[f].kind === 'ex' && !c.found.includes(f))) S.blind++;
-    (v.flags || []).forEach(f => { if (!S.flags.includes(f)) S.flags.push(f); });
     c.att = c.att.filter(f => !c.struck.includes(f));
+    const fls = (v.flags || []).concat(c.att.map(f => { const x = cs.findings[f].flag; return typeof x === 'function' ? x(S) : x; }).filter(Boolean));
+    fls.forEach(f => { if (!S.flags.includes(f)) S.flags.push(f); });
     c.verdict = v.id; c.founded = founded; c.stretch = stretch;
     S.cards.push({ c: S.cur, day: S.day, v: v.id });
     save();
-    const lst = (ids, cl) => ids.map(f => `<span class="${cl} ${cs.findings[f].kind}">${esc(cs.findings[f].t)}</span>`).join('');
+    const lst = (ids, cl) => ids.map(f => `<span class="${cl} ${cs.findings[f].kind}">${T(cs.findings[f].t)}</span>`).join('');
     const last = S.trust > 0 && S.trust <= 2 && S.trust < was;
     /* сначала штамп ложится на анкету на столе, потом приносят постановление с резолюцией */
     ui.busy = true; ui.slam = true; ui.sverka = false; refresh(true); ui.slam = false;
     const sf = $('#surface'); if (sf) { sf.classList.add('thud'); const st = $('.desk-stamp', sf); if (st) st.parentNode.style.zIndex = ++ui.z; }
     setTimeout(() => snd('stamp'), 240);
     setTimeout(() => { ui.busy = false; if (sf) sf.classList.remove('thud'); openModal(`<div class="sheet post">
-      <div class="doc-org">${esc(ORG)}</div>
+      <div class="doc-org">${esc(day().org || ORG)}</div>
       <div class="post-h">Постановление</div><div class="post-sub">по делу № ${cs.no}, ${esc(day().date)}</div>
-      <p>Я, ${esc(day().rank)} Студенецкого РО НКВД ${esc(S.name)}, рассмотрев материалы дела по обвинению гр. ${esc(cs.person.name.replace(/\s*\(.*\)/, ''))},</p>
+      <p>Я, ${esc(day().rank)} ${esc(day().unit || 'Студенецкого РО НКВД')} ${esc(S.name)}, рассмотрев материалы дела по обвинению гр. ${esc(cs.person.name.replace(/\s*\(.*\)/, ''))},</p>
       <p class="post-c">постановил:</p>
       <p class="post-v">${esc(v.label)}</p>
       <div class="post-gr"><b>Основания (подшито к постановлению)</b>${c.att.length ? lst(c.att, 'g') : '<em>не подшито</em>'}</div>
       ${c.struck.length ? `<div class="post-gr"><b>Из справки по делу исключено</b>${lst(c.struck, 'st')}</div>` : ''}
       <div class="post-sig"><span>${esc(day().rank)}</span><i>${esc(S.name)}</i></div>
       <div class="stamp slam">${esc(v.stamp)}</div>
-      <div class="resol"><b>Резолюция начальника РО</b><i>${esc(reply)}</i>${last ? '<i class="ps">И последнее. Ещё одна бумага мне поперёк — сдашь наган и удостоверение.</i>' : ''}<span>— Ломов</span></div>
+      <div class="resol"><b>${esc(day().bossTitle || 'Резолюция начальника РО')}</b><i>${T(reply)}</i>${last ? `<i class="ps">${esc(day().ps || 'И последнее. Ещё одна бумага мне поперёк — сдашь наган и удостоверение.')}</i>` : ''}<span>— ${esc(day().boss || 'Ломов')}</span></div>
       <div class="tdelta${S.trust < was ? ' down' : S.trust > was ? ' up' : ''}">Доверие руководства: ${was} → ${S.trust}</div>
       <button class="btn" data-act="afterv">Сдать папку</button></div>`); }, 850);
   }
   function afterVerdict() {
     closeModal();
-    if (S.trust <= 0) return ending('e_fired');
+    if (S.trust <= 0) return ending(day().fired || 'e_fired');
     S.cur = null; ui.verdict = null; ui.sel = null; save(); refresh(true);
   }
   function ending(id) { S.phase = 'end'; S.ending = id; save(); go(); }
@@ -452,9 +463,9 @@
   function paperHTML(p) {
     const items = p.items.filter(i => !i.if || i.if(S));
     return `<div class="paper">
-      <div class="mast"><div class="mast-l">Пролетарии всех стран, соединяйтесь!</div><div class="mast-h">Колхозная правда</div>
-      <div class="mast-s"><span>Орган Студенецкого райкома ВКП(б) и райисполкома</span><span>${esc(p.no)} · ${esc(p.date)}</span></div></div>
-      <div class="cols">${items.map(i => { const mine = i.c && S.cases[i.c] && S.cases[i.c].verdict; return `<article class="${i.big ? 'big' : ''}${mine ? ' mine' : ''}">${mine ? `<span class="pencil" title="Заметка по вашему делу">№ ${CASES[i.c].no}</span>` : ''}<h4>${esc(i.h)}</h4><p>${esc(i.t)}</p>${i.by ? `<div class="by">${esc(i.by)}</div>` : ''}</article>`; }).join('')}</div>
+      <div class="mast"><div class="mast-l">Пролетарии всех стран, соединяйтесь!</div><div class="mast-h">${esc((p.mast || {}).h || 'Колхозная правда')}</div>
+      <div class="mast-s"><span>${esc((p.mast || {}).s || 'Орган Студенецкого райкома ВКП(б) и райисполкома')}</span><span>${esc(p.no)} · ${esc(p.date)}</span></div></div>
+      <div class="cols">${items.map(i => { const mine = i.c && S.cases[i.c] && S.cases[i.c].verdict; return `<article class="${i.big ? 'big' : ''}${mine ? ' mine' : ''}">${mine ? `<span class="pencil" title="Заметка по вашему делу">№ ${CASES[i.c].no}</span>` : ''}<h4>${esc(i.h)}</h4><p>${T(i.t)}</p>${i.by ? `<div class="by">${esc(i.by)}</div>` : ''}</article>`; }).join('')}</div>
     </div>`;
   }
   function renderEvening() {
@@ -462,21 +473,33 @@
     app.innerHTML = `<div class="evening">
       <div class="ev-head"><span>Вечер. ${esc(d.paper.date)}</span><span>Свежий номер</span></div>
       ${paperHTML(d.paper)}
-      ${letters.map(l => `<div class="letter ${l.hand || ''}"><p>${esc(l.t)}</p>${l.foot ? `<div class="l-foot">${esc(l.foot)}</div>` : ''}</div>`).join('')}
-      <div class="ev-btns"><button class="btn ghost" data-act="cards">Картотека</button><button class="btn" data-act="next">${S.day === DAYS.length - 1 ? 'Месяц спустя' : 'Следующий день'}</button></div>
+      ${letters.map(l => `<div class="letter ${l.hand || ''}"><p>${T(l.t)}</p>${l.foot ? `<div class="l-foot">${esc(l.foot)}</div>` : ''}</div>`).join('')}
+      <div class="ev-btns"><button class="btn ghost" data-act="cards">Картотека</button><button class="btn" data-act="next">${d.inter ? esc(INTERS[d.inter].label || 'Месяц спустя') : 'Следующий день'}</button></div>
     </div>`;
     window.scrollTo(0, 0);
   }
 
+  function archiveBody(years) {
+    const struck = Object.values(S.cases).reduce((n, c) => n + c.struck.length, 0);
+    return `<p>За ${esc(years)} через ваш стол прошло ${S.cards.length} дел. Под каждым постановлением стоит одна и та же фамилия: ${esc(S.name)}.</p>
+      <p>Папки прошиты, пронумерованы и сданы в архив областного управления. На обложках штамп: «Хранить вечно».</p>
+      <p>Справки по делам подшиты как есть${struck ? ' — вместе со всем, что в них вычеркнуто' : ''}.</p>`;
+  }
+  /* между актами: газета → сцена → архивная карточка → следующий акт (или концовка, если акта ещё нет) */
   function renderInter() {
+    const it = INTERS[day().inter];
     if (S.step === 0) {
-      app.innerHTML = `<div class="evening"><div class="ev-head"><span>${esc(INTER.paper.date)}</span><span>Свежий номер</span></div>
-        ${paperHTML(INTER.paper)}<div class="ev-btns"><button class="btn" data-act="inter">Дальше</button></div></div>`;
-    } else {
-      const sc = INTER.scene;
+      app.innerHTML = `<div class="evening"><div class="ev-head"><span>${esc(it.paper.date)}</span><span>Свежий номер</span></div>
+        ${paperHTML(it.paper)}<div class="ev-btns"><button class="btn" data-act="inter">Дальше</button></div></div>`;
+    } else if (S.step === 1) {
+      const sc = it.scene;
       app.innerHTML = `<div class="center-scr"><div class="sheet brief"><div class="kicker">${esc(sc.kicker)}</div><h1>${esc(sc.title)}</h1>
         <div class="dateline">${esc(sc.date)}</div>${sc.text.map(p => `<p>${T(p)}</p>`).join('')}
         <button class="btn" data-act="actend">Сдать дела в архив</button></div></div>`;
+    } else {
+      const ar = it.arch;
+      app.innerHTML = `<div class="center-scr"><div class="sheet brief end"><div class="kicker">${esc(ar.kicker)}</div><h1>${esc(ar.title)}</h1>${archiveBody(ar.years)}
+        <div class="ev-btns"><button class="btn ghost" data-act="cards">Картотека</button><button class="btn" data-act="nextact">${esc(ar.next)}</button></div></div></div>`;
     }
     window.scrollTo(0, 0);
   }
@@ -484,15 +507,11 @@
   function renderEnding() {
     const e = ENDINGS[S.ending];
     let body = e.text.map(p => `<p>${T(p)}</p>`).join('');
-    if (S.ending === 'act1') {
-      const struck = Object.values(S.cases).reduce((n, c) => n + c.struck.length, 0);
-      body = `<p>За два года через ваш стол прошло ${S.cards.length} дел. Под каждым постановлением стоит одна и та же фамилия: ${esc(S.name)}.</p>
-        <p>Папки прошиты, пронумерованы и сданы в архив областного управления. На обложках штамп: «Хранить вечно».</p>
-        <p>Справки по делам подшиты как есть${struck ? ' — вместе со всем, что в них вычеркнуто' : ''}.</p>
-        <p class="fine">Акт второй, «Новая метла», в разработке. Сохранение останется.</p>`;
-    }
+    if (e.archive) body = archiveBody(e.archive) + (e.fine ? `<p class="fine">${esc(e.fine)}</p>` : '');
+    /* старое сохранение, остановившееся на конце первого акта, можно продолжить */
+    const more = S.ending === 'act1' && DAYS.length > S.day + 1;
     app.innerHTML = `<div class="center-scr"><div class="sheet brief end"><div class="kicker">${esc(e.kicker)}</div><h1>${esc(e.title)}</h1>${body}
-      <div class="ev-btns"><button class="btn ghost" data-act="cards">Картотека</button><button class="btn" data-act="restart">Начать заново</button></div></div></div>`;
+      <div class="ev-btns"><button class="btn ghost" data-act="cards">Картотека</button>${more ? '<button class="btn" data-act="nextact">Акт второй</button>' : ''}<button class="btn${more ? ' ghost' : ''}" data-act="restart">Начать заново</button></div></div></div>`;
   }
 
   /* ---------- модальные окна ---------- */
@@ -506,7 +525,7 @@
       return `<div class="card"><div class="face">${portraitSVG(cs.person.face)}</div><div>
         <b>${esc(cs.person.name)}</b><span>Дело № ${cs.no} · ${esc(DAYS[k.day].date)}</span>
         <span>${esc(v.short)} · подшито оснований: ${c.att.length}${c.struck.length ? ` · вычеркнуто из справки: ${c.struck.length}` : ''}</span>
-        <em>${known ? esc(v.fate) : 'Исход пока неизвестен.'}</em>
+        <em>${known ? T(v.fate) : 'Исход пока неизвестен.'}</em>
         <i>Подписал: ${esc(S.name)}</i></div></div>`;
     }).join('');
     openModal(`<div class="sheet cards"><h2>Картотека</h2>${cards || '<p class="fine">Карточек пока нет.</p>'}<button class="btn" data-act="close">Закрыть</button></div>`);
@@ -537,12 +556,13 @@
       ${DAYS.map((d, i) => `<button data-act="dbg" data-arg="day${i}">день ${i + 1}</button>`).join('')}</div>`;
     if (S.cur) {
       const cs = CASES[S.cur], c = rt(S.cur);
-      h += `<h5>Что с чем сверяется <button data-act="dbg" data-arg="all">найти всё</button></h5>`;
+      h += `<h5>Что с чем сверяется <button data-act="dbg" data-arg="all">найти всё</button></h5>
+        <p>Метка на строке — факт, в котором она участвует. Сводятся не любые две строки с одной меткой, а пары из списка ниже. В режиме сверки выберите строку — её пары зальются зелёным.</p>`;
       Object.keys(cs.findings).forEach(f => {
         const fd = cs.findings[f], pairs = cs.pairs.filter(p => p.f === f);
         const lockedReq = (cs.requests || []).filter(r => !c.unlocked.includes(r.doc) && pairs.every(p => p.a.startsWith(r.doc + '.') || p.b.startsWith(r.doc + '.')));
         h += `<div class="dbg-f ${fd.kind}${c.found.includes(f) ? ' ok' : ''}"><b>${f.replace('f_', '')}</b> · ${fd.kind === 'ex' ? 'в пользу' : 'уличает'} · вес ${fd.w || 2}${lockedReq.length ? ` · нужен запрос «${esc(lockedReq[0].label)}»` : ''}
-          <i>${esc(fd.t)}</i>${pairs.map(p => `<span>${esc(lineLabel(cs, p.a))} ↔ ${esc(lineLabel(cs, p.b))}</span>`).join('')}</div>`;
+          <i>${T(fd.t)}</i>${pairs.map(p => `<span>${esc(lineLabel(cs, p.a))} ↔ ${esc(lineLabel(cs, p.b))}</span>`).join('')}</div>`;
       });
       h += '<h5>Куда ведут постановления</h5>';
       cs.verdicts.forEach(v => {
@@ -553,7 +573,7 @@
           ${u ? `<span>без оснований: доверие ${sgn(u.trust || 0)}${u.viol ? ', нарушения +' + u.viol : ''}</span>` : ''}
           ${v.conflicts ? `<span>придётся вычеркнуть, если найдено: ${v.conflicts.map(f => f.replace('f_', '')).join(', ')}</span>` : ''}
           ${v.flags ? `<span>флаги: ${v.flags.join(', ')}</span>` : ''}
-          ${v.fate ? `<i>${esc(v.fate)}</i>` : ''}</div>`;
+          ${v.fate ? `<i>${T(v.fate)}</i>` : ''}</div>`;
       });
     }
     return h + '</div>';
@@ -569,8 +589,10 @@
     if (a === 'tm') S.trust = clamp(S.trust - 1, 1, 10);
     if (a === 'all' && S.cur) {
       const cs = CASES[S.cur], c = rt(S.cur);
-      (cs.requests || []).forEach(r => { if (!c.unlocked.includes(r.doc)) c.unlocked.push(r.doc); });
-      cs.pairs.forEach(p => { if (!c.found.includes(p.f)) { c.found.push(p.f); c.hits.push(p.a, p.b); } });
+      /* запросы, закрытые условием, и те, что игрок делает только сам (свои показания), отладка не трогает */
+      (cs.requests || []).forEach(r => { if (!c.unlocked.includes(r.doc) && !r.manual && !(r.if && !r.if(S))) c.unlocked.push(r.doc); });
+      const vis = visibleDocs(S.cur).map(d => d.id);
+      cs.pairs.forEach(p => { if (!c.found.includes(p.f) && [p.a, p.b].every(k => vis.includes(k.split('.')[0]))) { c.found.push(p.f); c.hits.push(p.a, p.b); } });
       save(); return refresh(true);
     }
     if (a.startsWith('day')) { S.day = +a.slice(3); S.time = 0; S.cur = null; S.phase = 'brief'; save(); return go(); }
@@ -593,12 +615,13 @@
     },
     req(id) {
       const cs = CASES[S.cur], c = rt(S.cur), r = cs.requests.find(x => x.id === id);
-      if (!r || timeLeft() < r.cost + COST.hit) return;
+      if (!r || timeLeft() < r.cost + COST.hit || (r.if && !r.if(S))) return;
       spend(r.cost); c.unlocked.push(r.doc); c.fresh.push(r.doc);
+      if (r.flag && !S.flags.includes(r.flag)) S.flags.push(r.flag);
       const sf = $('#surface'), doc = cs.docs.find(d => d.id === r.doc);
       c.pos[r.doc] = { x: Math.round(sf.clientWidth / 2 - 160), y: 90, z: ++ui.z };
       save(); refresh(true); snd('knock');
-      toast('Через ' + hm(r.cost) + ' принесли ответ: «' + doc.title + '». Он лежит поверх бумаг — сверьте его с остальными.');
+      toast(r.toast ? fill(r.toast) : 'Через ' + hm(r.cost) + ' принесли ответ: «' + doc.title + '». Он лежит поверх бумаг — сверьте его с остальными.');
     },
     pickv(id) { ui.verdict = ui.verdict === id ? null : id; renderSide(); },
     attach(id) {
@@ -618,12 +641,13 @@
     afterv() { afterVerdict(); },
     endday() { S.phase = 'evening'; S.cur = null; save(); go(); },
     next() {
-      if (S.day === DAYS.length - 1) { S.phase = 'inter'; S.step = 0; }
+      if (day().inter) { S.phase = 'inter'; S.step = 0; }
       else { S.day++; S.time = 0; S.phase = 'brief'; }
       save(); go();
     },
     inter() { S.step = 1; save(); go(); },
-    actend() { ending('act1'); },
+    actend() { const it = INTERS[day().inter]; if (it.ending) return ending(it.ending); S.step = 2; save(); go(); },
+    nextact() { if (S.day >= DAYS.length - 1) return; S.day++; S.time = 0; S.cur = null; S.ending = null; S.phase = 'brief'; save(); go(); },
     cards() { showCards(); },
     papers(i) { showPapers(i); },
     close() { closeModal(); },

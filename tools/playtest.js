@@ -18,6 +18,9 @@
       DAYS.forEach(d => d.directives.forEach(x => keys.add('dir.' + x.id)));
       cs.pairs.forEach(p => { [p.a, p.b].forEach(k => { if (!keys.has(k)) errs.push(id + ': нет строки ' + k); }); if (!cs.findings[p.f]) errs.push(id + ': нет факта ' + p.f); });
       Object.keys(cs.findings).forEach(f => { if (!cs.pairs.some(p => p.f === f)) errs.push(id + ': факт без пары ' + f); });
+      const seen = {};
+      cs.pairs.forEach(p => { const k = [p.a, p.b].sort().join(' ~ '); if (seen[k]) errs.push(id + ': пара ' + k + ' записана дважды (' + seen[k] + ', ' + p.f + ')'); seen[k] = p.f; });
+      Object.keys(cs.findings).forEach(f => { if (!cs.verdicts.some(v => (v.grounds || []).concat(v.conflicts || []).includes(f))) errs.push(id + ': факт ' + f + ' не нужен ни одному решению'); });
       cs.verdicts.forEach(v => {
         (v.grounds || []).concat(v.conflicts || []).forEach(f => { if (!cs.findings[f]) errs.push(id + '/' + v.id + ': нет факта ' + f); });
         if (v.grounds) {
@@ -34,20 +37,29 @@
   const KIND = { kolos: 'vstop', yama: 'vstop', telka: 'vstop', zuev: 'vstop', demin: 'vsych', chast: 'vprof', padezh: 'vhl', ochered: 'vstop', seld: 'vstop', selkor: 'vstop' };
   const FAIR = { kolos: 'vstop', yama: 'v61', telka: 'vstop', zuev: 'v589', demin: 'vsych', chast: 'vprof', padezh: 'vhl', ochered: 'vstop', seld: 'vstop', selkor: 'voso' };
   const MID = { kolos: 'v162', yama: 'v61', telka: 'vadm', zuev: 'v82', demin: 'v111', chast: 'vprof', padezh: 'v111', ochered: 'v5810', seld: 'vstop', selkor: 'voso' };
+  /* акт II */
+  Object.assign(HARSH, { sychev: 'v587', lomov: 'vkr', zina: 'v5812', sinits: 'v587', puzyr: 'voso', chern: 'voso' });
+  Object.assign(KIND, { sychev: 'vstop', lomov: 'vstop', zina: 'vuv', sinits: 'vstop', puzyr: 'vstop', chern: 'vuv' });
+  Object.assign(FAIR, { sychev: 'v78', lomov: 'v193', zina: 'vuv', sinits: 'vstop', puzyr: 'v95', chern: 'vuv' });
+  Object.assign(MID, { sychev: 'v78', lomov: 'vkr', zina: 'vuv', sinits: 'v111', puzyr: 'v95', chern: 'v193' });
+  const SVOI = { chern: ['r_svoi'] };
   const STRATS = {
     'ленивый каратель': { find: false, v: HARSH },
     'ленивый добряк': { find: false, v: KIND },
     'честный': { find: true, v: FAIR },
     'честный с отказом': { find: true, v: Object.assign({}, FAIR, { selkor: 'vstop' }) },
-    'знающий каратель': { find: true, v: HARSH },
+    'знающий каратель': { find: true, v: HARSH, req: SVOI },
+    'честный, Черных в трибунал': { find: true, v: Object.assign({}, FAIR, { chern: 'v193' }) },
+    'честный, Черных сдан': { find: true, v: Object.assign({}, FAIR, { chern: 'voso' }), req: SVOI },
+    'спасти Черных': { find: true, v: Object.assign({}, FAIR, { sychev: 'v587', lomov: 'vkr' }) },
     'середняк': { find: true, v: MID },
     'мягкий': { find: true, v: Object.assign({}, FAIR, { zuev: 'v82' }) },
   };
 
   async function reset() {
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 8; i++) {
       if (q('[data-act=new]')) break;
-      const b = q('[data-act=totitle]') || q('[data-act=afterv]') || q('[data-act=close]') || q('[data-act=restart]') || q('[data-act=menu]');
+      const b = q('[data-act=totitle]') || q('[data-act=afterv]') || q('[data-act=close]') || q('[data-act=restart]') || q('[data-act=menu]') || q('[data-act=todesk]') || q('[data-act=guideok]');
       if (b) b.click();
       await wait(30);
     }
@@ -66,6 +78,7 @@
       for (const id of DAYS[d].cases) {
         const cs = CASES[id], v = cs.verdicts.find(x => x.id === sg.v[id]);
         click('.folder[data-arg=' + id + ']');
+        ((sg.req || {})[id] || []).forEach(r => click('[data-act=req][data-arg=' + r + ']'));
         if (sg.find) click('[data-act=dbg][data-arg=all]');
         for (let pass = 0; pass < (v.refuse ? 2 : 1); pass++) {
           click('[data-act=pickv][data-arg=' + v.id + ']');
@@ -84,10 +97,14 @@
         if (q('.end')) { end = st().ending; break outer; }
       }
       click('[data-act=endday]'); click('[data-act=next]');
+      if (q('[data-act=inter]')) {
+        click('[data-act=inter]'); click('[data-act=actend]');
+        if (q('[data-act=nextact]')) click('[data-act=nextact]'); else { end = st().ending; break; }
+      }
     }
-    if (!end) { click('[data-act=inter]'); click('[data-act=actend]'); end = st().ending; }
     const s = st();
-    return { name, trust: trust.join(' '), end, viol: s.viol, blind: s.blind, cover: s.cover, stretch: s.stretch };
+    return { name, trust: trust.join(' '), end, viol: s.viol, blind: s.blind, cover: s.cover, stretch: s.stretch,
+      flags: s.flags.filter(f => /review|named|testified|chern|zina/.test(f)).join(' ') };
   }
 
   async function all() { const out = []; for (const n of Object.keys(STRATS)) out.push(await run(n)); console.table(out); return out; }

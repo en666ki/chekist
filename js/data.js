@@ -3,7 +3,9 @@
    Содержание: пролог и акт I. Студенецкий район, 1934–1936.
    Формат дела:
      docs[].lines[]  — строки; ключ строки = '<doc>.<line>'
-     pairs[]         — пары строк, сверка которых даёт факт f
+     pairs[]         — пары строк, сверка которых даёт факт f. Правило: если две строки сами по себе
+                       устанавливают факт (расходятся или подтверждают друг друга) — пара должна быть.
+                       Две строки одного факта без пары между собой — «слово против слова», нужна третья бумага
      findings{}      — факты: kind 'ex' (в пользу) | 'in' (уличает)
      verdicts[]      — conflicts: факты, которые придётся вычеркнуть;
                        grounds/need: подшитые факты и их вес; не добрал — «необоснованное» (unf)
@@ -54,6 +56,7 @@ CASES.kolos = {
     { a: 'dop.a', b: 'spr.field', f: 'f_field' },
     { a: 'dir.melk', b: 'spr.need', f: 'f_need' },
     { a: 'dir.melk', b: 'dop.b', f: 'f_need' },
+    { a: 'dop.b', b: 'spr.need', f: 'f_need' }, { a: 'ank.fam', b: 'spr.need', f: 'f_need' }, { a: 'dir.melk', b: 'spr.prev', f: 'f_need' }, { a: 'dir.melk', b: 'ves.w', f: 'f_need' },
     { a: 'akt.w', b: 'dop.c', f: 'f_conf' }, { a: 'akt.place', b: 'dop.c', f: 'f_conf' }, { a: 'ves.what', b: 'dop.c', f: 'f_conf' },
   ],
   findings: {
@@ -119,6 +122,7 @@ CASES.yama = {
   pairs: [
     { a: 'spr.expl', b: 'ob.pit', f: 'f_hid' },
     { a: 'zay.a', b: 'ob.pit', f: 'f_hid' },
+    { a: 'spr.done', b: 'ob.pit', f: 'f_hid' }, { a: 'spr.task', b: 'ob.pit', f: 'f_hid' }, { a: 'ob.gun', b: 'dop.gun', f: 'f_gun' },
     { a: 'zay.night', b: 'ob.pit', f: 'f_wit' },
     { a: 'dop.br', b: 'kom.br', f: 'f_br' },
     { a: 'dop.br', b: 'kom.nol', f: 'f_br' },
@@ -127,20 +131,21 @@ CASES.yama = {
     f_hid: { kind: 'in', t: 'Заявлял, что хлеба нет ни зерна, — при обыске в потайной яме изъято 38 пудов.' },
     f_wit: { kind: 'in', w: 1, t: 'Показания Жилина о мешках в риге подтверждены обыском.' },
     f_br: { kind: 'in', t: 'Брат с 1931 г. безвыездно на спецпоселении. Оставить хлеб весной 1934-го не мог.' },
+    f_gun: { kind: 'in', t: 'При обыске изъят обрез с патронами. Что хранил его с 1921 г., Косых признаёт сам.' },
   },
   verdicts: [
     { id: 'v61', label: 'Ст. 61 ч. 3 (злостный отказ от государственного задания) и ст. 182 (хранение оружия). В нарсуд.', short: 'Ст. 61, 182 — в нарсуд', stamp: 'В НАРСУД',
-      grounds: ['f_hid', 'f_br', 'f_wit'], fx: { trust: 1 },
+      grounds: ['f_hid', 'f_br', 'f_gun', 'f_wit'], fx: { trust: 1 },
       reply: 'Чисто сработано. Так и дальше.',
       unf: { trust: 0, reply: 'Решение верное, а оснований подшито — кот наплакал. Суду что читать прикажешь? Сверяй и подшивай, тебя за этим посадили.' },
       fate: 'Нарсуд: 2 года лишения свободы с конфискацией. Семья выслана за пределы района.' },
     { id: 'v5814', label: 'Ст. 58-14 (контрреволюционный саботаж). Направить на Особое совещание.', short: 'Ст. 58-14 — на ОСО', stamp: 'НА ОСО',
-      grounds: ['f_hid', 'f_br', 'f_wit'], fx: { trust: 1, viol: 1 },
+      grounds: ['f_hid', 'f_br', 'f_gun', 'f_wit'], fx: { trust: 1, viol: 1 },
       unf: { trust: 0, reply: 'Пятьдесят восьмая — и ни одной подшитой улики? Особое совещание проглотит, оно всё глотает. Но ты у меня так не работай.' },
       reply: 'Можно и так. Область такие любит. Умысел, правда, у тебя из воздуха, — ну да кулак он и есть кулак.',
       fate: 'Особое совещание: 5 лет ИТЛ. Семья выслана.' },
     { id: 'vstop', label: 'Дело прекратить за недоказанностью. Хлеб вернуть владельцу.', short: 'Прекращено', stamp: 'ПРЕКРАЩЕНО',
-      conflicts: ['f_hid', 'f_wit', 'f_br'], fx: { trust: -3 },
+      conflicts: ['f_hid', 'f_wit', 'f_br', 'f_gun'], fx: { trust: -3 },
       reply: 'Яма. Обрез. Тридцать восемь пудов. И ты — «прекратить»? Ещё одна такая бумага, и разговаривать с тобой будут не здесь.',
       fate: 'Освобождён 21.VIII.1934. Хлеб возвращён.' },
   ],
@@ -177,7 +182,7 @@ CASES.telka = {
       L('sig', 'Председатель с/с', 'Гусев') ] },
   ],
   pairs: [
-    { a: 'zay.a', b: 'vet.cause', f: 'f_vet' }, { a: 'zay.a', b: 'vet.rec', f: 'f_vet' }, { a: 'zay.why', b: 'vet.rec', f: 'f_vet' },
+    { a: 'zay.a', b: 'vet.cause', f: 'f_vet' }, { a: 'zay.a', b: 'vet.rec', f: 'f_vet' }, { a: 'zay.why', b: 'vet.rec', f: 'f_vet' }, { a: 'zay.why', b: 'vet.cause', f: 'f_vet' },
     { a: 'ob.leg', b: 'vet.cause', f: 'f_vet' }, { a: 'ob.leg', b: 'vet.rec', f: 'f_vet' },
     { a: 'zay.why', b: 'spr.own', f: 'f_own' }, { a: 'ob.own', b: 'spr.own', f: 'f_own' },
     { a: 'ank.arr', b: 'dir.sank', f: 'f_sank' },
@@ -252,10 +257,12 @@ CASES.zuev = {
   pairs: [
     { a: 'card.marks', b: 'zad.marks', f: 'f_id' },
     { a: 'ud.who', b: 'card.name', f: 'f_id' },
+    { a: 'dop.a', b: 'er.who', f: 'f_id' }, { a: 'ud.who', b: 'er.who', f: 'f_id' }, { a: 'zad.how', b: 'er.who', f: 'f_id' },
     { a: 'dop.alibi', b: 'er.left', f: 'f_alibi' },
+    { a: 'dop.alibi', b: 'er.thr', f: 'f_alibi' }, { a: 'stor.fire', b: 'er.thr', f: 'f_alibi' }, { a: 'stor.loss', b: 'er.thr', f: 'f_alibi' },
     { a: 'zad.bidon', b: 'mts.bidon', f: 'f_bidon' },
     { a: 'zad.bidon', b: 'mts.gone', f: 'f_bidon' },
-    { a: 'dop.bid', b: 'mts.gone', f: 'f_bidon' },
+    { a: 'dop.bid', b: 'mts.gone', f: 'f_bidon' }, { a: 'dop.bid', b: 'mts.bidon', f: 'f_bidon' },
     { a: 'stor.man', b: 'card.marks', f: 'f_sto' },
     { a: 'stor.man', b: 'zad.marks', f: 'f_sto' },
   ],
@@ -324,9 +331,12 @@ CASES.demin = {
   pairs: [
     { a: 'dok.no', b: 'kn.r1', f: 'f_book' }, { a: 'dok.no', b: 'kn.r2', f: 'f_book' },
     { a: 'rev.lack', b: 'kn.r1', f: 'f_book' }, { a: 'rev.lack', b: 'kn.r2', f: 'f_book' },
+    { a: 'dop.notes', b: 'kn.r1', f: 'f_book' }, { a: 'dop.notes', b: 'kn.r2', f: 'f_book' }, { a: 'dok.a', b: 'kn.r1', f: 'f_book' }, { a: 'dok.a', b: 'kn.r2', f: 'f_book' },
     { a: 'dop.notes', b: 'leb.saw', f: 'f_notes' }, { a: 'dok.no', b: 'leb.saw', f: 'f_notes' },
+    { a: 'dop.took', b: 'leb.saw', f: 'f_notes' }, { a: 'kn.r1', b: 'leb.saw', f: 'f_notes' }, { a: 'kn.r2', b: 'leb.saw', f: 'f_notes' },
     { a: 'dok.no', b: 'gr.ord', f: 'f_gr' }, { a: 'dok.a', b: 'gr.hrom', f: 'f_gr' }, { a: 'dop.c', b: 'gr.ord', f: 'f_gr' },
-    { a: 'rev.lack', b: 'kn.sig', f: 'f_resp' }, { a: 'ank.soc', b: 'rev.lack', f: 'f_resp' }, { a: 'dok.a', b: 'kn.sig', f: 'f_resp' },
+    { a: 'kn.r1', b: 'gr.ord', f: 'f_gr' }, { a: 'kn.r2', b: 'gr.ord', f: 'f_gr' }, { a: 'dok.a', b: 'gr.ord', f: 'f_gr' }, { a: 'dok.no', b: 'gr.hrom', f: 'f_gr' }, { a: 'dop.notes', b: 'gr.ord', f: 'f_gr' }, { a: 'dop.c', b: 'gr.hrom', f: 'f_gr' },
+    { a: 'rev.lack', b: 'kn.sig', f: 'f_resp' }, { a: 'ank.soc', b: 'rev.lack', f: 'f_resp' }, { a: 'dok.a', b: 'kn.sig', f: 'f_resp' }, { a: 'ank.soc', b: 'kn.sig', f: 'f_resp' }, { a: 'ank.soc', b: 'dok.a', f: 'f_resp' },
   ],
   findings: {
     f_book: { kind: 'ex', t: 'По амбарной книге 16 и 15 ц отпущены «по записке председателя» — ровно сумма недостачи.' },
@@ -434,9 +444,10 @@ CASES.padezh = {
   requests: [{ id: 'r_zap', label: 'Изъять докладные Бочарова в правлении', hint: 'Конюх говорит, что дважды писал председателю. Проверить.', cost: 60, doc: 'zap' }],
   pairs: [
     { a: 'dok.feed', b: 'fur.fact', f: 'f_feed' }, { a: 'dok.feed', b: 'fur.why', f: 'f_feed' }, { a: 'fur.norm', b: 'fur.fact', f: 'f_feed' },
-    { a: 'dok.pois', b: 'vet.cause', f: 'f_vet' }, { a: 'dok.pois', b: 'vet.st', f: 'f_vet' },
+    { a: 'dop.a', b: 'fur.fact', f: 'f_feed' }, { a: 'dop.a', b: 'fur.why', f: 'f_feed' }, { a: 'vet.cause', b: 'fur.fact', f: 'f_feed' }, { a: 'vet.st', b: 'fur.fact', f: 'f_feed' },
+    { a: 'dok.pois', b: 'vet.cause', f: 'f_vet' }, { a: 'dok.pois', b: 'vet.st', f: 'f_vet' }, { a: 'dop.a', b: 'vet.cause', f: 'f_vet' },
     { a: 'dok.a', b: 'ank.job', f: 'f_resp' }, { a: 'vet.n', b: 'ank.job', f: 'f_resp' }, { a: 'dok.hid', b: 'ank.soc', f: 'f_church' },
-    { a: 'dok.hid', b: 'zap.n1', f: 'f_zap' }, { a: 'dok.hid', b: 'zap.n2', f: 'f_zap' }, { a: 'dok.hid', b: 'zap.res', f: 'f_zap' }, { a: 'dop.wr', b: 'zap.n1', f: 'f_zap' }, { a: 'dop.wr', b: 'zap.n2', f: 'f_zap' },
+    { a: 'dok.hid', b: 'zap.n1', f: 'f_zap' }, { a: 'dok.hid', b: 'zap.n2', f: 'f_zap' }, { a: 'dok.hid', b: 'zap.res', f: 'f_zap' }, { a: 'dop.wr', b: 'zap.n1', f: 'f_zap' }, { a: 'dop.wr', b: 'zap.n2', f: 'f_zap' }, { a: 'dop.wr', b: 'zap.res', f: 'f_zap' },
   ],
   findings: {
     f_feed: { kind: 'ex', t: 'Овса выдавалось вчетверо меньше нормы: фураж сдан в счёт встречного плана по распоряжению председателя.' },
@@ -493,14 +504,17 @@ CASES.ochered = {
   pairs: [
     { a: 'sv.gram', b: 'sv.read', f: 'f_gram' }, { a: 'sv.gram', b: 'sv.sig', f: 'f_gram' }, { a: 'sv.gram', b: 'sv.text', f: 'f_gram' },
     { a: 'zay.sig', b: 'spr.zhal', f: 'f_motive' }, { a: 'zay.words', b: 'spr.zhal', f: 'f_motive' }, { a: 'zay.a', b: 'spr.zhal', f: 'f_motive' },
-    { a: 'zay.words', b: 'dop.words', f: 'f_words' }, { a: 'sv.text', b: 'dop.words', f: 'f_words' }, { a: 'dir.dvoe', b: 'sv.text', f: 'f_words' },
+    { a: 'zay.words', b: 'dop.words', f: 'f_words' }, { a: 'sv.text', b: 'dop.words', f: 'f_words' }, { a: 'dir.dvoe', b: 'sv.text', f: 'f_words' }, { a: 'zay.words', b: 'sv.text', f: 'f_words' },
     { a: 'dop.words', b: 'dir.otkl', f: 'f_said' }, { a: 'zay.a', b: 'dop.words', f: 'f_said' }, { a: 'zay.a', b: 'dop.deaf', f: 'f_said' },
+    { a: 'dop.deaf', b: 'spr.ear', f: 'f_deaf' }, { a: 'zay.words', b: 'spr.ear', f: 'f_deaf' }, { a: 'dop.c', b: 'spr.part', f: 'f_part' },
   ],
   findings: {
     f_gram: { kind: 'ex', t: 'Свидетель Лаптев неграмотен — «лично прочитать» протокол не мог. Формулировка показаний не его.' },
     f_motive: { kind: 'ex', t: 'За неделю до заявления Бортников подал жалобу на Мошкину; в её лавке назначена ревизия.' },
     f_said: { kind: 'in', w: 1, t: 'Что громко высказался по поводу убийства т. Кирова, Бортников признаёт сам.' },
     f_words: { kind: 'ex', w: 1, t: 'Самой фразы свидетель не приводит. Смысл слов известен только со слов заявительницы.' },
+    f_deaf: { kind: 'ex', w: 1, t: 'Бортников туг на ухо, тугоухость подтверждена фельдшером. «Громко, на всю лавку» он говорит всегда.' },
+    f_part: { kind: 'ex', w: 1, t: 'В 1919 г. Бортников — боец партизанского отряда. Сын погиб в РККА под Перекопом.' },
   },
   verdicts: [
     { id: 'v588', label: 'Ст. 17–58-8 (террористические намерения). В спецколлегию, в порядке постановления от 1.XII.1934.', short: 'Ст. 58-8 — по закону 1 декабря', stamp: 'В СПЕЦКОЛЛЕГИЮ',
@@ -514,7 +528,7 @@ CASES.ochered = {
       reply: 'Скромно, но сойдёт. Время теперь такое, что лучше пере-, чем недо-.',
       fate: 'Особое совещание: 5 лет ИТЛ. Умер на этапе 11.I.1935.' },
     { id: 'vstop', label: 'Дело прекратить за отсутствием состава преступления.', short: 'Прекращено', stamp: 'ПРЕКРАЩЕНО',
-      grounds: ['f_gram', 'f_motive', 'f_words'], need: 3, fx: { trust: -2 }, flags: ['bort_free'],
+      grounds: ['f_gram', 'f_motive', 'f_words', 'f_deaf', 'f_part'], need: 3, fx: { trust: -2 }, flags: ['bort_free'],
       reply: 'Кирова убили, а у тебя — «состава нет». Подпишу, потому что бумага сходится. Но в области спросят, почему по району ни одного отклика на первое декабря. Спросят с меня. А я — с тебя.',
       unf: { trust: -3, reply: 'Человек на всю лавку грозит вождям через четыре дня после Смольного, а ты его выпускаешь, и оснований у тебя на донышке. Это уже не мягкость. Это линия.' },
       fate: 'Освобождён 9.XII.1934.' },
@@ -547,7 +561,7 @@ CASES.seld = {
   ],
   pairs: [
     { a: 'zay.port', b: 'nak.what', f: 'f_nak' }, { a: 'zay.port', b: 'nak.osn', f: 'f_nak' },
-    { a: 'ob.a', b: 'nak.what', f: 'f_nak' }, { a: 'ob.a', b: 'nak.osn', f: 'f_nak' }, { a: 'zay.a', b: 'nak.osn', f: 'f_nak' },
+    { a: 'ob.a', b: 'nak.what', f: 'f_nak' }, { a: 'ob.a', b: 'nak.osn', f: 'f_nak' }, { a: 'zay.a', b: 'nak.osn', f: 'f_nak' }, { a: 'zay.a', b: 'nak.what', f: 'f_nak' },
     { a: 'zay.a', b: 'ob.a', f: 'f_wrap' }, { a: 'zay.port', b: 'ob.b', f: 'f_wrap' }, { a: 'zay.port', b: 'ob.a', f: 'f_wrap' },
   ],
   findings: {
@@ -615,9 +629,10 @@ CASES.selkor = {
   pairs: [
     { a: 'zay.when', b: 'rono.konf', f: 'f_alibi' }, { a: 'zay.words', b: 'rono.konf', f: 'f_alibi' }, { a: 'dop.a', b: 'rono.konf', f: 'f_alibi' }, { a: 'sv.text', b: 'rono.konf', f: 'f_alibi' },
     { a: 'ob.book', b: 'rono.opis', f: 'f_book' }, { a: 'ob.inv', b: 'rono.opis', f: 'f_book' }, { a: 'dop.b', b: 'rono.spis', f: 'f_book' }, { a: 'ob.book', b: 'rono.spis', f: 'f_book' }, { a: 'zay.len', b: 'rono.opis', f: 'f_book' },
+    { a: 'dop.b', b: 'rono.opis', f: 'f_book' }, { a: 'ob.inv', b: 'rono.spis', f: 'f_book' }, { a: 'zay.len', b: 'rono.spis', f: 'f_book' }, { a: 'dop.b', b: 'ob.inv', f: 'f_book' },
     { a: 'ob.pon', b: 'zay.sig', f: 'f_pon' }, { a: 'ob.pon', b: 'dir.pon', f: 'f_pon' }, { a: 'ob.pon', b: 'zay.when', f: 'f_pon' }, { a: 'ob.pon', b: 'sv.sig', f: 'f_pon' },
     { a: 'sv.date', b: 'sv.text', f: 'f_date' }, { a: 'sv.date', b: 'zay.when', f: 'f_date' },
-    { a: 'zay.len', b: 'ank.edu', f: 'f_len' }, { a: 'ob.book', b: 'zay.len', f: 'f_lit' }, { a: 'sv.text', b: 'zay.words', f: 'f_wit' },
+    { a: 'zay.len', b: 'ank.edu', f: 'f_len' }, { a: 'ob.book', b: 'zay.len', f: 'f_lit' }, { a: 'sv.text', b: 'zay.words', f: 'f_wit' }, { a: 'sv.text', b: 'zay.when', f: 'f_wit' }, { a: 'dop.c', b: 'ank.edu', f: 'f_len' },
     { a: 'zay.sig', b: 'vyp.leb', f: 'f_motive' }, { a: 'dop.d', b: 'vyp.leb', f: 'f_motive' }, { a: 'dop.d', b: 'vyp.res', f: 'f_motive' }, { a: 'dop.d', b: 'vyp.sig', f: 'f_motive' }, { a: 'zay.when', b: 'vyp.leb', f: 'f_motive' },
   ],
   findings: {
@@ -718,7 +733,7 @@ const DAYS = [
       { h: 'Три пуда золы', t: 'Школьники Малых Вязов собрали для колхозных полей три пуда печной золы и вызывают на соревнование покровскую школу.', by: 'Селькор П. Лебедев' },
     ] } },
 
-  { id: 'd4', date: '27 августа 1936 г.', kicker: 'Акт первый · Район', title: 'Группа', minutes: 540, rank: 'уполномоченный',
+  { id: 'd4', date: '27 августа 1936 г.', kicker: 'Акт первый · Район', title: 'Группа', minutes: 540, rank: 'уполномоченный', inter: 'i1',
     place: 'с. Студёное, районное отделение НКВД',
     brief: [
       'Прошло полтора года. Вы — уполномоченный, у вас свой кабинет и своя печать. Пескарёв — старший уполномоченный. Черных всё на той же должности и всё с тем же чайником.',
@@ -744,6 +759,8 @@ const DAYS = [
 
 /* Межактовая вставка */
 const INTER = {
+  label: 'Месяц спустя',
+  arch: { kicker: 'Конец первого акта', title: 'Дела сданы в архив', years: 'два года', next: 'Акт второй. Область' },
   paper: { no: '№ 115', date: '28 сентября 1936 г.', items: [
     { big: 1, h: 'Тов. Н. И. Ежов — народный комиссар внутренних дел', t: 'Постановлением ЦИК Союза ССР от 26 сентября тов. Ежов Николай Иванович назначен народным комиссаром внутренних дел СССР. Тов. Г. Г. Ягода назначен народным комиссаром связи.' },
     { h: 'Крепче бдительность', t: 'Трудящиеся района с удовлетворением встретили весть об укреплении руководства наркомата. Органы будут очищены от людей, утративших чекистскую бдительность и опоздавших с разоблачением врага.' },
@@ -770,5 +787,6 @@ const ENDINGS = {
     'Дело Лебедева в тот же вечер принял Пескарёв. К утру оно было готово: в справке — ни одной помарки. Особое совещание дало учителю пять лет.',
     'Вас уволили через неделю, «за развал следственной работы». В сентябре Ломова арестовали, и вы целый месяц думали, что это справедливость. В ноябре Ломов назвал на допросе участников своей «группы». Вашу фамилию он назвал третьей.',
     'Под приговором Лебедеву вашей подписи нет. Больше про этот отказ сказать нечего.' ] },
-  act1: { kicker: 'Конец первого акта', title: 'Дела сданы в архив', text: [] },
+  act1: { kicker: 'Конец первого акта', title: 'Дела сданы в архив', text: [], archive: 'два года' },
 };
+const INTERS = { i1: INTER };

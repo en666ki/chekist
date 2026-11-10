@@ -274,3 +274,16 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; }
 .guide-foot { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(42,34,26,.4); }
 .guide-foot .fine { margin: 0; }
 .menu-btns { flex-wrap: wrap; }
+
+/* отладка: пары выбранной строки */
+.surface.dbg-on .ln.dbgp { background: rgba(46,125,50,.3) !important; outline: 2px solid #2e7d32; }
+
+/* ---------- акт II: закрытые запросы и запрос «подписать свои показания» ---------- */
+.req.gone { opacity: .6; text-decoration: none; cursor: not-allowed; }
+.req.gone b { text-decoration: line-through; }
+.req.own { border-color: var(--red); }
+.req.own i { color: var(--red); }
+
+/* записка из внутренней тюрьмы */
+.letter.note { width: 430px; background: #e6d98a; color: #2a2a3a; font: 22px/1.35 var(--hand); transform: rotate(-1.6deg); }
+.letter.note .l-foot { color: #4a4636; }
