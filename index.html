@@ -7,14 +7,49 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Bad+Script&family=Cousine:wght@400;700&family=Marck+Script&family=Old+Standard+TT:ital,wght@0,400;0,700;1,400&family=Oswald:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/game.css?v=6">
+<link rel="stylesheet" href="css/game.css?v=10">
 </head>
 <body>
+<!-- общие фильтры: зерно и мягкая тень для фотокарточек, неровный оттиск для штампов и печатей -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="pgrain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.15" numOctaves="2" seed="11"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 .52  0 0 0 0 .5  0 0 0 0 .46  0 0 0 1.5 -.5"/>
+    </filter>
+    <filter id="psoft" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.5"/>
+    </filter>
+    <filter id="pphoto" x="-4%" y="-4%" width="108%" height="108%" color-interpolation-filters="sRGB">
+      <feTurbulence type="fractalNoise" baseFrequency=".08" numOctaves="2" seed="4" result="t"/>
+      <feDisplacementMap in="SourceGraphic" in2="t" scale="2.6" xChannelSelector="R" yChannelSelector="G" result="d"/>
+      <feGaussianBlur in="d" stdDeviation="1.15" result="b"/>
+      <feComponentTransfer in="b">
+        <feFuncR type="table" tableValues="0 .05 .24 .6 .9 1"/><feFuncG type="table" tableValues="0 .05 .24 .6 .9 1"/><feFuncB type="table" tableValues="0 .05 .24 .6 .9 1"/>
+      </feComponentTransfer>
+    </filter>
+    <filter id="pblot" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency=".03 .045" numOctaves="2" seed="21"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 .92  0 0 0 0 .9  0 0 0 0 .84  0 0 0 3.4 -2.05"/>
+    </filter>
+    <radialGradient id="pvig" cx="46%" cy="40%" r="75%">
+      <stop offset="45%" stop-color="#000" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000" stop-opacity=".55"/>
+    </radialGradient>
+    <filter id="rough" x="-6%" y="-12%" width="112%" height="124%">
+      <feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="2" seed="3" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -2.3 1.8" result="m"/>
+      <feComposite in="SourceGraphic" in2="m" operator="in" result="s"/>
+      <feTurbulence type="fractalNoise" baseFrequency=".045" numOctaves="1" seed="9" result="w"/>
+      <feDisplacementMap in="s" in2="w" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
 <div id="app"></div>
 <div id="overlay"></div>
-<script src="js/portrait.js?v=6"></script>
-<script src="js/data.js?v=6"></script>
-<script src="js/act2.js?v=6"></script>
-<script src="js/game.js?v=6"></script>
+<script src="js/portrait.js?v=10"></script>
+<script src="js/data.js?v=10"></script>
+<script src="js/act2.js?v=10"></script>
+<script src="js/game.js?v=10"></script>
 </body>
 </html>

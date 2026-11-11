@@ -20,7 +20,7 @@ const CASES = {};
 
 CASES.kolos = {
   no: '112', title: 'Колоски', charge: 'хищение колхозного хлеба',
-  person: { name: 'Рябинина Авдотья Никитична', face: { s: 'f', age: 41, hat: 'scarf', seed: 3 } },
+  person: { name: 'Рябинина Авдотья Никитична', face: { s: 'f', age: 41, hat: 'scarf', seed: 3, gaunt: 1 } },
   docs: [
     { id: 'ank', kind: 'form', org: ORG, title: 'Анкета арестованной', face: true, lines: [
       L('name', 'Фамилия, имя, отчество', 'Рябинина Авдотья Никитична'),
@@ -217,7 +217,7 @@ CASES.telka = {
 
 CASES.zuev = {
   no: '241', title: 'Беглый', charge: 'поджог колхозного амбара',
-  person: { name: 'Зуйков Николай Егорович (он же Зуев Н. Е.?)', face: { s: 'm', age: 46, beard: 2, hair: 'short', seed: 23, w: 1.04 } },
+  person: { name: 'Зуйков Николай Егорович (он же Зуев Н. Е.?)', face: { s: 'm', age: 46, beard: 2, hair: 'short', seed: 23, w: 1.04, scar: 1, gaunt: 1 } },
   docs: [
     { id: 'ud', kind: 'typed', title: 'Справка', sub: 'Гремячкинский с/с, 20.VII.1934 — изъята у задержанного', lines: [
       L('who', null, 'Дана гр. Зуйкову Николаю Егоровичу, 1890 г. р., в том, что он является единоличником-бедняком д. Гремячки.'),
@@ -364,7 +364,7 @@ CASES.demin = {
 
 CASES.chast = {
   no: '252', title: 'Частушка', charge: 'антисоветская агитация',
-  person: { name: 'Чурсин Василий Петрович', face: { s: 'm', age: 19, hair: 'short', seed: 42, w: 0.95 } },
+  person: { name: 'Чурсин Василий Петрович', face: { s: 'm', age: 19, hair: 'short', seed: 42, w: 0.95, bruise: 1 } },
   docs: [
     { id: 'ank', kind: 'form', org: ORG, title: 'Анкета задержанного', face: true, lines: [
       L('name', 'Фамилия, имя, отчество', 'Чурсин Василий Петрович'),
@@ -411,7 +411,7 @@ CASES.chast = {
 
 CASES.padezh = {
   no: '318', title: 'Падёж', charge: 'вредительство в колхозном животноводстве',
-  person: { name: 'Бочаров Трофим Ильич', face: { s: 'm', age: 54, beard: 2, hair: 'bald', seed: 57 } },
+  person: { name: 'Бочаров Трофим Ильич', face: { s: 'm', age: 54, beard: 2, hair: 'bald', seed: 57, gaunt: 1 } },
   docs: [
     { id: 'ank', kind: 'form', org: ORG, title: 'Анкета арестованного', face: true, lines: [
       L('name', 'Фамилия, имя, отчество', 'Бочаров Трофим Ильич'),
@@ -539,7 +539,7 @@ CASES.ochered = {
 
 CASES.seld = {
   no: '509', title: 'Селёдка', charge: 'надругательство над портретом',
-  person: { name: 'Мухин Егор Саввич', face: { s: 'm', age: 58, must: 1, hat: 'cap', seed: 81, gray: 1 } },
+  person: { name: 'Мухин Егор Саввич', face: { s: 'm', age: 58, must: 1, hat: 'cap', seed: 81, gray: 1, squint: 1 } },
   docs: [
     { id: 'ank', kind: 'form', org: ORG, title: 'Анкета арестованного', face: true, lines: [
       L('name', 'Фамилия, имя, отчество', 'Мухин Егор Саввич'),

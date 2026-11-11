@@ -287,3 +287,350 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; }
 /* записка из внутренней тюрьмы */
 .letter.note { width: 430px; background: #e6d98a; color: #2a2a3a; font: 22px/1.35 var(--hand); transform: rotate(-1.6deg); }
 .letter.note .l-foot { color: #4a4636; }
+
+/* ============================================================
+   НАТУРАЛИЗМ: стол под лампой, подшитые бумаги, бланк постановления.
+   Блок лежит последним и переопределяет схематичный вид выше.
+   ============================================================ */
+:root {
+  --ink-type: #29252f; --ink-pen: #2b2f63; --pencil: #a8281c;
+  --woodtex: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='900' height='520'><filter id='w' x='0' y='0' width='100%' height='100%'><feTurbulence type='fractalNoise' baseFrequency='.005 .3' numOctaves='4' seed='7'/><feColorMatrix values='0 0 0 0 .1  0 0 0 0 .05  0 0 0 0 .02  0 0 0 2.6 -.95'/></filter><rect width='900' height='520' filter='url(%23w)'/></svg>");
+  --cloth: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='c'><feTurbulence type='fractalNoise' baseFrequency='1.6' numOctaves='2' seed='5'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 .04  0 0 0 0 0  0 0 0 .55 -.08'/></filter><rect width='180' height='180' filter='url(%23c)'/></svg>");
+}
+
+/* ---------- стол ---------- */
+.surface { background:
+    var(--woodtex),
+    repeating-linear-gradient(180deg, transparent 0 172px, rgba(0,0,0,.4) 172px 174px, rgba(255,255,255,.035) 174px 175px),
+    linear-gradient(#55361f, #2b1a10); }
+/* свет настольной лампы: тёплое пятно сверху, темнота по дальним углам; лежит и на бумагах */
+.surface::after { content: ''; position: absolute; inset: 0; z-index: 8500; pointer-events: none;
+  background:
+    radial-gradient(ellipse 62% 58% at 66% -4%, rgba(255,224,160,.17), transparent 62%),
+    radial-gradient(ellipse 105% 100% at 66% 0%, transparent 48%, rgba(8,5,2,.46) 100%); }
+/* сукно с кожаным кантом; на нём — след стакана, клякса, прожог */
+.baize { inset: 30px 30px 26px; border: 0; border-radius: 2px;
+  background:
+    radial-gradient(circle 33px at 84% 23%, transparent 26px, rgba(8,5,3,.3) 27px 29.5px, transparent 31px),
+    radial-gradient(circle 31px at 80% 27%, transparent 26px, rgba(8,5,3,.18) 27px 28.5px, transparent 30px),
+    radial-gradient(ellipse 15px 10px at 31% 81%, rgba(10,12,38,.6), transparent 72%),
+    radial-gradient(ellipse 5px 7px at 33.4% 83%, rgba(10,12,38,.5), transparent 75%),
+    radial-gradient(circle 6px at 11% 62%, #090604 0 2px, rgba(70,45,20,.6) 3.4px, transparent 6px),
+    radial-gradient(ellipse 46% 26% at 46% 96%, rgba(255,255,255,.055), transparent 70%),
+    #24372b var(--cloth);
+  box-shadow: 0 0 0 10px #1e130b, 0 0 0 11px rgba(255,235,200,.07), 0 0 0 14px #110a06, 0 6px 18px 12px rgba(0,0,0,.45),
+    inset 0 0 0 2px rgba(0,0,0,.55), inset 0 0 150px rgba(0,0,0,.5); }
+.baize::after { background: none; }
+.prop.lamp { width: 250px; left: 56%; top: -4px; }
+.prop.glass { width: 122px; right: 30px; top: 118px; }
+.prop.cal { width: 74px; right: 178px; top: 92px; transform: rotate(3deg); }
+.prop.pad { width: 212px; right: 28px; bottom: 34px; }
+.prop.ash { width: 104px; left: 44px; bottom: 34px; }
+.empty-hint { top: 46%; color: rgba(240,226,192,.4); text-shadow: 0 1px 0 rgba(0,0,0,.6); }
+.case-strip { text-shadow: 0 1px 2px rgba(0,0,0,.8); }
+
+/* ---------- бумага вообще: подшита в дело, пожелтела по краям, сложена пополам ---------- */
+.doc { padding: 15px 17px 18px 33px; color: var(--ink-type); font: 13px/1.46 var(--type);
+  background:
+    radial-gradient(circle at 13px 21%, #14100b 0 3.8px, rgba(0,0,0,.3) 4.2px 5.2px, transparent 5.5px),
+    radial-gradient(circle at 13px 79%, #14100b 0 3.8px, rgba(0,0,0,.3) 4.2px 5.2px, transparent 5.5px),
+    linear-gradient(90deg, rgba(120,84,40,.2), transparent 8%, transparent 91%, rgba(120,84,40,.17)),
+    linear-gradient(180deg, rgba(120,84,40,.14), transparent 6%, transparent 93%, rgba(120,84,40,.2)),
+    linear-gradient(180deg, transparent calc(50% - 1px), rgba(70,50,25,.22) calc(50% - 1px), rgba(255,255,255,.34) calc(50% + 1px), transparent calc(50% + 2px)),
+    #e6ddc6 var(--grain);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 1px rgba(0,0,0,.45), 0 3px 6px rgba(0,0,0,.34), 0 11px 22px rgba(0,0,0,.36); }
+.doc.drag { box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 2px 3px rgba(0,0,0,.4), 0 14px 22px rgba(0,0,0,.4), 0 30px 46px rgba(0,0,0,.42); }
+/* карандашный номер листа дела */
+.ld { position: absolute; right: 10px; top: 4px; font: 16px/1 var(--hand); color: #4d4a57; opacity: .72; transform: rotate(-7deg); pointer-events: none; }
+.doc.new::after { right: 34px; top: 5px; }
+.doc .doc-head { margin-bottom: 9px; }
+
+/* угловой штамп учреждения */
+.doc .doc-org { width: 64%; margin: 0 0 10px; padding: 0; border: 0; text-align: center; font: 600 9.5px/1.3 var(--caps); letter-spacing: .13em; opacity: .8; }
+.doc .doc-org::after { content: '«___» __________ 193__ г.  № ____'; display: block; margin-top: 3px; padding-top: 3px; border-top: 1.5px solid rgba(42,34,26,.65); font: 8.5px/1.2 var(--type); letter-spacing: 0; text-transform: none; white-space: nowrap; overflow: hidden; }
+
+/* машинопись: лента фиолетово-чёрная, буквы чуть расплылись */
+.doc.typed { text-shadow: 0 0 .55px rgba(41,37,47,.6); }
+.doc.typed .doc-title { text-align: center; font: 700 13px/1.5 var(--type); letter-spacing: .3em; text-decoration: underline; text-underline-offset: 3px; }
+.doc.typed .doc-sub { text-align: center; font: 12px/1.35 var(--type); font-style: normal; opacity: .9; }
+.doc.typed .ln { text-indent: 1.6em; }
+.doc.typed .ln .k { font: 12px var(--type); font-style: normal; opacity: 1; text-decoration: underline; text-underline-offset: 2px; }
+
+/* бланк: шапка типографская, графы заполнены чернилами от руки */
+.doc.form .doc-head { text-align: center; padding-bottom: 6px; border-bottom: 3px double rgba(42,34,26,.6); }
+.doc.form .doc-org { margin-left: auto; margin-right: auto; }
+.doc.form .doc-title { font: 700 15px/1.25 var(--serif); letter-spacing: .12em; }
+.doc.form .doc-sub { font: italic 12px/1.3 var(--serif); }
+.doc.form .ln { padding: 4px 4px 0; border-bottom: 1px solid rgba(42,34,26,.5); }
+.doc.form .ln .k { font: 10.5px/1.2 var(--serif); font-style: normal; letter-spacing: .01em; opacity: .82; }
+.doc.form .ln .v { font: 17px/1.18 var(--hand); color: var(--ink-pen); }
+.surface.roomy .doc.form .ln .v { font-size: 18.5px; }
+
+/* вырезки из газеты, наклеенные на лист */
+.doc.clip .doc-title { font: 700 14px var(--serif); letter-spacing: .1em; text-transform: uppercase; }
+.doc.clip .doc-sub { font: 15px/1.2 var(--hand); color: var(--ink-pen); }
+.doc.clip .ln { margin: 8px 2px 0; padding: 6px 9px 7px; background: #cfc6ad var(--grain); color: #1d1913; font: 12.5px/1.34 var(--serif); text-align: justify; box-shadow: 0 1px 2px rgba(0,0,0,.4); transform: rotate(-.7deg); }
+.doc.clip .ln:nth-child(even) { transform: rotate(.9deg); }
+.doc.clip .ln .k { display: block; font: 15px/1.1 var(--hand); color: #4d4a57; opacity: .9; text-align: left; }
+
+/* от руки: лист из тетради в клетку, левый край оборван */
+.doc.hand { padding: 13px 15px 18px 30px; color: var(--ink-pen); font: 17.5px/26px var(--hand);
+  background:
+    linear-gradient(90deg, transparent 23px, rgba(170,58,48,.4) 23px 24px, transparent 24px),
+    repeating-linear-gradient(0deg, transparent 0 12px, rgba(70,90,140,.2) 12px 13px),
+    repeating-linear-gradient(90deg, transparent 0 12px, rgba(70,90,140,.2) 12px 13px),
+    linear-gradient(90deg, rgba(120,84,40,.16), transparent 10%, transparent 90%, rgba(120,84,40,.16)),
+    #e2dbc8 var(--grain);
+  box-shadow: none; filter: drop-shadow(0 1px 1px rgba(0,0,0,.45)) drop-shadow(0 6px 9px rgba(0,0,0,.4));
+  clip-path: polygon(1.6% 0, 100% 0, 100% 100%, 1.2% 100%, 0 97%, 1.5% 94%, .3% 90%, 1.8% 86%, .2% 81%, 1.4% 77%, 0 72%, 1.6% 68%, .4% 63%, 1.7% 59%, .1% 54%, 1.3% 50%, 0 45%, 1.6% 41%, .5% 36%, 1.8% 32%, .2% 27%, 1.5% 23%, 0 18%, 1.7% 14%, .4% 9%, 1.5% 5%, .3% 2%); }
+.doc.hand.drag { box-shadow: none; filter: drop-shadow(0 2px 2px rgba(0,0,0,.4)) drop-shadow(0 18px 20px rgba(0,0,0,.45)); }
+.doc.hand .doc-body { background: none; }
+.doc.hand .doc-title { font: 23px/26px var(--hand); text-transform: none; letter-spacing: 0; color: var(--ink-pen); text-align: center; }
+.doc.hand .doc-sub { font: 15px/26px var(--hand); color: var(--ink-pen); text-align: right; opacity: .9; }
+.doc.hand .doc-head { margin-bottom: 0; }
+.doc.hand .ld { right: 12px; top: 5px; }
+.surface.roomy .doc.hand { background-size: auto, 14px 14px, 14px 14px, auto, auto; }
+.surface.roomy .doc.hand .doc-body { background: none; }
+.surface.roomy .doc.hand .doc-title, .surface.roomy .doc.hand .doc-sub { line-height: 28px; }
+
+/* памятка: серая брошюра на скрепках */
+.doc.dir { padding-left: 24px; border-left: 0; background: linear-gradient(90deg, rgba(0,0,0,.2), transparent 12px), #c9cdc1 var(--grain); color: #1f2420; }
+.doc.dir::before { content: ''; position: absolute; left: 5px; top: 22%; width: 2px; height: 12px; background: #77756c; box-shadow: 0 0 0 .5px #33312c, 0 150px 0 #77756c, 0 150px 0 .5px #33312c; }
+.doc.dir .doc-title { font: 700 14px/1.25 var(--serif); letter-spacing: .14em; text-align: center; }
+.doc.dir .doc-sub { text-align: center; }
+
+/* обложка дела с резолюцией красным карандашом */
+.doc.resol { width: 300px; padding: 16px 18px 22px; border: 0; color: var(--pencil); font: 21px/1.25 var(--hand);
+  background: linear-gradient(90deg, rgba(60,35,10,.25), transparent 10%, transparent 90%, rgba(60,35,10,.22)), #b48f60 var(--grain);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.2), inset 0 0 0 7px #b48f60, inset 0 0 0 8.5px rgba(44,32,21,.5), 0 3px 6px rgba(0,0,0,.4), 0 11px 22px rgba(0,0,0,.4); }
+.doc.resol .doc-title { margin: 4px 0 2px; font: 600 26px/1 var(--caps); letter-spacing: .34em; color: #2c2015; opacity: .5; text-align: center; }
+.doc.resol .doc-title::before { content: 'ДЕЛО № '; }
+.doc.resol .doc-title { font-size: 0; } .doc.resol .doc-title::before { font-size: 26px; }
+.doc.resol .doc-body { transform: rotate(-5deg); margin: 14px 4px 8px 10px; }
+.doc.resol .ld { display: none; }
+
+/* фотокарточка приклеена к анкете, угол прихвачен печатью */
+.doc .face { position: relative; float: right; width: 86px; margin: 2px 0 8px 12px; padding: 3px 3px 8px; background: #d9d2bf; box-shadow: 0 1px 2px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.3); transform: rotate(1.7deg); line-height: 0; }
+.surface.roomy .doc .face { width: 98px; }
+.doc .face::after { content: ''; position: absolute; left: -17px; bottom: -13px; width: 46px; height: 46px; border-radius: 50%; border: 2px solid rgba(72,58,140,.6); box-shadow: inset 0 0 0 3px rgba(72,58,140,0), inset 0 0 0 4px rgba(72,58,140,.42); filter: url(#rough); pointer-events: none; }
+.portrait { filter: grayscale(.72) sepia(.2) contrast(1.12) brightness(.96); }
+.card .face { flex: 0 0 84px; padding: 3px 3px 7px; background: #d9d2bf; box-shadow: 0 1px 2px rgba(0,0,0,.5); align-self: flex-start; }
+.card em.epi { color: var(--blue); }
+
+/* оттиски: краска легла неровно */
+.stamp { filter: url(#rough); border-width: 3px; border-style: solid; outline: 1px solid var(--red); outline-offset: 2px; }
+.f-stamp { filter: url(#rough); }
+.ln.hit { box-shadow: none; background: rgba(168,40,28,.05); border-bottom: 2px solid rgba(168,40,28,.72); border-radius: 0 0 60% 40% / 0 0 3px 2px; }
+.doc.form .ln.hit { border-bottom: 2px solid rgba(168,40,28,.72); }
+
+/* ---------- входящие: картонные папки на завязках ---------- */
+.folder { padding: 22px 12px 11px 15px; background: linear-gradient(90deg, rgba(60,35,10,.22), transparent 14%), #b69264 var(--grain); border-radius: 1px 9px 1px 1px;
+  box-shadow: inset 0 1px 0 rgba(255,240,210,.35), inset 0 0 0 1px rgba(0,0,0,.2), 2px 2px 0 #8a6d47, 4px 4px 0 #6b5435, 5px 9px 14px rgba(0,0,0,.6); }
+.folder::before { content: 'ДЕЛО'; position: absolute; left: 15px; top: 6px; font: 600 9px var(--caps); letter-spacing: .55em; color: #2c2015; opacity: .55; }
+.f-no { opacity: .8; } .f-t { font-size: 19px; }
+.folder.done { filter: saturate(.35) brightness(.72); }
+.sticky { box-shadow: 0 1px 1px rgba(0,0,0,.4), 0 8px 14px rgba(0,0,0,.5); background: linear-gradient(180deg, rgba(0,0,0,.08), transparent 14px), #e3d583 var(--grain); }
+
+/* ---------- справка по делу: лист на планшете ---------- */
+.clip { background: repeating-linear-gradient(0deg, transparent 0 25px, rgba(70,90,140,.12) 25px 26px), linear-gradient(90deg, rgba(120,84,40,.14), transparent 10%, transparent 90%, rgba(120,84,40,.14)), var(--paper2) var(--grain);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.25), 0 6px 16px rgba(0,0,0,.5); }
+.clip::before { width: 104px; height: 22px; margin-left: -52px; top: -10px; background: linear-gradient(#b7b7b0, #6a6a63 55%, #44443f); border-radius: 3px 3px 5px 5px; box-shadow: 0 2px 5px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.4); }
+
+/* ---------- постановление: типографский бланк ---------- */
+.post-wrap { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.post.blank { width: 650px; padding: 24px 48px 40px 62px; color: var(--ink-type); font: 14px/1.55 var(--type); text-shadow: 0 0 .5px rgba(41,37,47,.55);
+  background:
+    radial-gradient(circle at 22px 18%, #0e0b08 0 5px, rgba(0,0,0,.3) 5.4px 6.6px, transparent 7px),
+    radial-gradient(circle at 22px 82%, #0e0b08 0 5px, rgba(0,0,0,.3) 5.4px 6.6px, transparent 7px),
+    linear-gradient(90deg, rgba(120,84,40,.18), transparent 7%, transparent 92%, rgba(120,84,40,.16)),
+    linear-gradient(180deg, rgba(120,84,40,.12), transparent 5%, transparent 94%, rgba(120,84,40,.18)),
+    linear-gradient(180deg, transparent calc(50% - 1px), rgba(70,50,25,.2) calc(50% - 1px), rgba(255,255,255,.32) calc(50% + 1px), transparent calc(50% + 2px)),
+    #e8dfc9 var(--grain);
+  box-shadow: 0 2px 3px rgba(0,0,0,.5), 0 18px 50px rgba(0,0,0,.7); }
+.post.blank p { margin: 0 0 6px; text-indent: 2em; }
+.post-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; min-height: 132px; margin-bottom: 4px; }
+/* резолюция — наискось в левом верхнем углу, красным карандашом */
+.post-res { flex: 1 1 auto; margin: 16px 0 14px -14px; transform: rotate(-4.5deg); transform-origin: left top; color: var(--pencil); font: 19px/1.2 var(--hand); text-shadow: none; }
+.post-res i { display: block; font-style: normal; }
+.post-res i.ps { margin-top: 6px; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.post-res span { display: block; margin-top: 2px; text-align: right; font-size: 26px; }
+.post-utv { flex: 0 0 196px; font: 12px/1.45 var(--type); }
+.post-utv b { display: block; letter-spacing: .22em; text-transform: uppercase; }
+.post-utv span { display: block; }
+.post-utv em { display: block; margin: 2px 0 2px 26px; border-bottom: 1px solid rgba(42,34,26,.7); color: var(--pencil); font: 27px/1 var(--hand); font-style: normal; transform: rotate(-5deg); text-shadow: none; }
+.post.blank .post-h { font: 700 23px/1.2 var(--serif); letter-spacing: .42em; text-indent: .42em; text-shadow: none; }
+.post.blank .post-sub { margin-bottom: 4px; font: italic 13px var(--serif); text-shadow: none; }
+.post-city { display: flex; justify-content: space-between; margin: 0 0 12px; font-size: 12.5px; }
+.post.blank .post-c { margin: 8px 0 6px; text-indent: .34em; text-align: center; font-weight: 700; letter-spacing: .34em; text-transform: uppercase; }
+.post-fnd { margin: 0 0 6px; padding-left: 2.4em; }
+.post-fnd li { margin-bottom: 4px; padding-left: 7px; }
+.post-fnd li.ex { box-shadow: -3px 0 0 -1px rgba(44,63,134,.75); } .post-fnd li.in { box-shadow: -3px 0 0 -1px rgba(168,40,28,.8); }
+.post.blank .post-none { text-align: center; text-indent: 0; opacity: .75; }
+.post-excl { margin: 8px 0 4px; }
+.post-excl b { display: block; font-weight: 400; text-decoration: underline; text-underline-offset: 2px; }
+.post-excl span { display: block; margin: 3px 0 3px 2em; opacity: .85; text-decoration: line-through; text-decoration-color: var(--ink-pen); text-decoration-thickness: 2px; }
+.post-excl i { display: block; text-align: right; color: var(--ink-pen); font: 19px/1.1 var(--hand); font-style: normal; transform: rotate(-2deg); text-shadow: none; }
+.post.blank .post-v { font-weight: 700; }
+.post.blank .post-sig { display: flex; align-items: baseline; gap: 12px; margin: 24px 0 0; padding: 0; border: 0; }
+.post.blank .post-sig i { flex: 1; border-bottom: 1px solid rgba(42,34,26,.7); text-align: center; color: var(--ink-pen); font: 31px/1 var(--hand); transform: rotate(-2deg); text-shadow: none; }
+.seal { position: absolute; left: 150px; bottom: 6px; width: 118px; color: rgba(72,58,140,.6); transform: rotate(-12deg); filter: url(#rough); pointer-events: none; mix-blend-mode: multiply; }
+.post.blank .stamp.slam { right: 44px; top: auto; bottom: 84px; }
+.post-foot { display: flex; align-items: center; gap: 20px; }
+.post-foot .tdelta { margin: 0; color: var(--ui); font-size: 13px; opacity: .9; }
+.post-foot .tdelta.down { color: #e0604f; } .post-foot .tdelta.up { color: #a5cc9f; }
+
+/* начало дня: что случилось до того, как вы сели за стол */
+.brief .daynote { padding-left: 14px; border-left: 3px solid var(--red); }
+.brief .tdelta { margin-bottom: 14px; }
+
+/* правки после просмотра: штамп на анкете не даёт прокрутки, тонкие полосы прокрутки, оттиск не лезет на подпись */
+.doc { overflow-x: hidden; scrollbar-color: rgba(60,45,25,.45) transparent; }
+.inbox, .side, .cards, .papers, #overlay { scrollbar-width: thin; scrollbar-color: #5a4a36 transparent; }
+.doc .desk-stamp { right: 16px; bottom: 20px; }
+.post.blank .stamp.slam { right: 52px; bottom: 96px; }
+.post-res { padding-right: 10px; }
+
+/* ============================================================
+   ФОТОТЕКСТУРЫ И БУМАЖНЫЙ ИНТЕРФЕЙС.
+   Стол — фотография дерева, сукна и кожи (assets/tex, Poly Haven, CC0).
+   Рамок, панелей и кнопок нет: слева стопка папок, справа листы — справка, бланки запросов, бланк постановления.
+   ============================================================ */
+.desk { grid-template-columns: 214px 1fr 352px;
+  background: linear-gradient(rgba(16,9,4,.46), rgba(12,7,3,.6)), #2a1a10 url(../assets/tex/wood.jpg) 0 0 / 820px; }
+/* свет лампы лежит на всём столе сразу */
+.desk::after { content: ''; position: fixed; inset: 52px 0 0 0; z-index: 8500; pointer-events: none;
+  background:
+    radial-gradient(ellipse 58% 62% at 52% 2%, rgba(255,222,160,.15), transparent 64%),
+    radial-gradient(ellipse 96% 105% at 52% 6%, transparent 46%, rgba(6,4,2,.5) 100%); }
+.surface, .inbox, .side { background: none; border: 0; }
+.surface::after { content: none; }
+
+/* верхняя планка: тёмная кожа, тиснение */
+.bar { background: linear-gradient(rgba(8,5,3,.74), rgba(8,5,3,.86)), url(../assets/tex/leather2.jpg) 0 0 / 420px; border-bottom: 1px solid #000; box-shadow: 0 3px 8px rgba(0,0,0,.65); position: relative; z-index: 8600; }
+.bar-r button { border: 0; padding: 5px 10px; color: rgba(215,180,106,.85); }
+.bar-r button:hover { background: none; color: #f0d79a; text-decoration: underline; text-underline-offset: 4px; }
+
+/* сукно с кожаным кантом — фотографии, перекрашенные фильтром */
+.baize { inset: 20px 12px 18px; border-radius: 3px;
+  background: linear-gradient(rgba(10,6,3,.42), rgba(10,6,3,.55)), url(../assets/tex/leather.jpg) 0 0 / 380px;
+  box-shadow: 0 2px 2px rgba(0,0,0,.6), 0 10px 26px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,220,170,.12), inset 0 0 0 1px rgba(0,0,0,.6);
+  outline: 1px dashed rgba(230,196,140,.2); outline-offset: -7px; }
+.baize::before { content: ''; position: absolute; inset: 14px; background: url(../assets/tex/cloth.jpg) 0 0 / 560px;
+  filter: hue-rotate(98deg) saturate(.5) brightness(.34) contrast(1.15);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.8); }
+.baize::after { content: ''; position: absolute; inset: 14px;
+  background:
+    radial-gradient(circle 33px at 84% 23%, transparent 26px, rgba(6,4,2,.34) 27px 29.5px, transparent 31px),
+    radial-gradient(circle 31px at 80% 27%, transparent 26px, rgba(6,4,2,.2) 27px 28.5px, transparent 30px),
+    radial-gradient(ellipse 15px 10px at 31% 81%, rgba(8,10,34,.62), transparent 72%),
+    radial-gradient(ellipse 5px 7px at 33.4% 83%, rgba(8,10,34,.5), transparent 75%),
+    radial-gradient(circle 6px at 11% 62%, #070503 0 2px, rgba(70,45,20,.6) 3.4px, transparent 6px),
+    radial-gradient(ellipse 50% 28% at 46% 98%, rgba(255,255,255,.06), transparent 70%);
+  box-shadow: inset 0 0 160px rgba(0,0,0,.55), inset 0 3px 8px rgba(0,0,0,.6); }
+.case-strip { left: 38px; top: 40px; }
+.tidy-btn { top: 36px; } .sv-btn { top: 32px; }
+
+/* ярлыки «Сверка» и «Разложить» — бумажные, а не кнопки */
+.sv-btn, .tidy-btn { background: #ddd4bc var(--grain); color: #29252f; border: 0; font: 700 13px var(--type); letter-spacing: .16em; text-transform: uppercase;
+  box-shadow: 0 1px 1px rgba(0,0,0,.5), 0 6px 12px rgba(0,0,0,.5); transform: rotate(-1deg); }
+.tidy-btn { transform: rotate(1.2deg); font-weight: 400; }
+.sv-btn kbd { opacity: .6; }
+.sv-btn.on { background: #efe6cf var(--grain); color: var(--pencil); border: 0; outline: 2px solid var(--pencil); outline-offset: -4px; }
+.sv-btn.pulse { animation: pulse2 1.6s infinite; }
+@keyframes pulse2 { 50% { box-shadow: 0 0 0 8px rgba(215,180,106,.3), 0 6px 12px rgba(0,0,0,.5); } }
+
+/* ---------- слева: папки стопкой, записка ---------- */
+.inbox { padding: 16px 10px 20px 14px; }
+.inbox h3 { color: rgba(240,226,192,.5); text-shadow: 0 1px 1px rgba(0,0,0,.7); }
+.inbox .btn.wide { margin: 12px 0 4px; background: #ddd4bc var(--grain); color: #29252f; border: 0; padding: 9px 10px; font: 700 12.5px/1.3 var(--type); letter-spacing: .04em; text-transform: none; text-decoration: underline; text-underline-offset: 3px;
+  box-shadow: 0 1px 1px rgba(0,0,0,.5), 0 6px 12px rgba(0,0,0,.5); transform: rotate(-.8deg); }
+.inbox .btn.wide:hover { background: #ebe2cb var(--grain); }
+
+/* ---------- справа: листы на столе ---------- */
+.side { padding: 18px 18px 40px 6px; }
+.pile { display: flex; flex-direction: column; gap: 18px; }
+.clip { box-shadow: 0 1px 1px rgba(0,0,0,.5), 0 8px 18px rgba(0,0,0,.5); min-height: 0; }
+.side .clip { transform: rotate(.4deg); }
+
+/* справка по делу — свой лист в линейку, записи от руки */
+.sprav { position: relative; padding: 12px 14px 10px 30px; transform: rotate(.5deg);
+  background:
+    linear-gradient(90deg, transparent 22px, rgba(170,58,48,.38) 22px 23px, transparent 23px),
+    repeating-linear-gradient(0deg, transparent 0 25px, rgba(70,90,140,.2) 25px 26px),
+    linear-gradient(90deg, rgba(120,84,40,.16), transparent 10%, transparent 90%, rgba(120,84,40,.16)),
+    #e3dbc7 var(--grain);
+  color: var(--ink-pen); box-shadow: 0 1px 1px rgba(0,0,0,.5), 0 8px 18px rgba(0,0,0,.5); }
+.sprav h3 { margin: 0 0 4px; font: 22px/26px var(--hand); letter-spacing: 0; text-transform: none; color: var(--ink-pen); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+.sprav .finds li { padding: 2px 2px 4px; border-bottom: 0; font: 16.5px/26px var(--hand); }
+.sprav .finds li.none { font: 16px/26px var(--hand); color: #5c5868; opacity: .8; }
+.sprav .finds li.ex { color: var(--ink-pen); } .sprav .finds li.in { color: #7a1f1a; }
+.sprav .finds .tag { display: inline; margin-right: 6px; font: 13.5px/26px var(--hand); letter-spacing: 0; text-transform: none; color: #5c5868; opacity: 1; text-decoration: underline; text-underline-offset: 3px; }
+.sprav .finds .tag::after { content: ':'; }
+.sprav .finds li.need { background: none; outline: 0; box-shadow: -4px 0 0 0 var(--pencil); }
+.sprav .finds li.struck .ft { text-decoration-color: #1d1b2a; }
+.sprav .finds li.att { background: rgba(255,255,255,.3); padding-left: 20px; box-shadow: none; }
+.sprav .finds li.att.need { box-shadow: -4px 0 0 0 var(--pencil); }
+.sprav .finds .fa { gap: 14px; margin: -2px 0 0; }
+.sprav .finds .fa button, .sprav .finds .fa button:hover { background: none; border: 0; padding: 0; font: 15px/22px var(--hand); letter-spacing: 0; text-transform: none; color: #5c5868; text-decoration: underline dotted; text-underline-offset: 3px; }
+.sprav .finds .fa button:hover { color: #1d1b2a; text-decoration-style: solid; }
+.sprav .finds .fa .bx { color: var(--pencil); border: 0; }
+.sprav .finds .fa button.full { opacity: .4; }
+.pnote { margin: 4px 0 0; font: 14px/26px var(--hand); color: #5c5868; text-align: right; }
+
+/* бланки запросов — отрывные листки */
+.slips { display: flex; flex-direction: column; gap: 9px; padding: 0 4px; }
+.req, .req:hover:not(:disabled) { position: relative; padding: 8px 12px 9px; border: 0; background: #dcd3bb var(--grain); color: var(--ink-type); font: 12.5px/1.35 var(--type); text-align: left;
+  box-shadow: 0 1px 1px rgba(0,0,0,.5), 0 6px 12px rgba(0,0,0,.45); transform: rotate(-.9deg); border-top: 2px dashed rgba(42,34,26,.35); }
+.req:nth-child(even) { transform: rotate(.7deg); }
+.req:hover:not(:disabled) { background: #e9e0c9 var(--grain); }
+.req em { display: block; margin-bottom: 2px; font: 600 9px var(--caps); font-style: normal; letter-spacing: .34em; text-transform: uppercase; opacity: .6; }
+.req i { float: none; position: absolute; right: 10px; top: 7px; font: 700 12px var(--type); opacity: .75; }
+.req b { display: block; text-decoration: underline; text-underline-offset: 2px; }
+.req span { margin-top: 3px; font: 15.5px/1.2 var(--hand); font-style: normal; color: #5c5868; opacity: 1; }
+.req:disabled { opacity: .55; }
+.req.own { border-top-color: var(--pencil); } .req.own em, .req.own i { color: var(--pencil); opacity: 1; }
+
+/* бланк постановления */
+.blank { position: relative; padding: 14px 18px 40px 32px; transform: rotate(-.5deg); color: var(--ink-type); font: 12.5px/1.45 var(--type);
+  background:
+    radial-gradient(circle at 13px 16%, #14100b 0 3.8px, rgba(0,0,0,.3) 4.2px 5.2px, transparent 5.5px),
+    radial-gradient(circle at 13px 84%, #14100b 0 3.8px, rgba(0,0,0,.3) 4.2px 5.2px, transparent 5.5px),
+    linear-gradient(90deg, rgba(120,84,40,.2), transparent 8%, transparent 91%, rgba(120,84,40,.17)),
+    linear-gradient(180deg, rgba(120,84,40,.14), transparent 6%, transparent 93%, rgba(120,84,40,.2)),
+    #e8dfc9 var(--grain);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 1px 1px rgba(0,0,0,.5), 0 10px 22px rgba(0,0,0,.55); }
+.bl-org { width: 70%; margin: 0 0 10px; text-align: center; font: 600 9px/1.3 var(--caps); letter-spacing: .13em; text-transform: uppercase; opacity: .8; }
+.bl-org::after { content: '«___» __________ 193__ г.  № ____'; display: block; margin-top: 3px; padding-top: 3px; border-top: 1.5px solid rgba(42,34,26,.65); font: 8.5px/1.2 var(--type); letter-spacing: 0; text-transform: none; white-space: nowrap; overflow: hidden; }
+.bl-h { text-align: center; font: 700 17px/1.2 var(--serif); letter-spacing: .36em; text-indent: .36em; text-transform: uppercase; }
+.bl-sub { text-align: center; font: italic 12px var(--serif); }
+.bl-t { margin: 12px 0 2px; } .bl-t b { letter-spacing: .18em; text-transform: uppercase; } .bl-t i { font-size: 10.5px; opacity: .7; font-style: normal; }
+.bl-lines { margin: 0; padding-left: 20px; }
+.bl-lines li { min-height: 27px; padding: 4px 2px 1px; border-bottom: 1px solid rgba(42,34,26,.55); font: 16px/1.2 var(--hand); color: var(--ink-pen); cursor: pointer; }
+.bl-lines li.in { color: #7a1f1a; } .bl-lines li.empty, .blank.done .bl-lines li { cursor: default; }
+.bl-lines li:not(.empty):hover { text-decoration: line-through; text-decoration-color: rgba(42,34,26,.4); }
+.blank.done .bl-lines li:hover { text-decoration: none; }
+.blank .vlist { margin-top: 2px; }
+.blank .vopt { display: block; width: 100%; padding: 5px 2px; border: 0; background: none; color: var(--ink-type); font: 12.5px/1.42 var(--type); text-align: left; }
+.blank .vopt:hover:not(:disabled) { background: none; } .blank .vopt:hover:not(:disabled) span { background: rgba(43,47,99,.09); }
+.blank .vopt.on { font-weight: 700; }
+.blank .vopt.on span { text-decoration: underline wavy var(--ink-pen); text-decoration-thickness: 1.5px; text-underline-offset: 4px; }
+.blank .vopt:disabled { cursor: default; }
+.blank .warn, .blank .attn { margin: 10px 0 0; padding: 0; border: 0; background: none; color: var(--pencil); font: 16px/1.2 var(--hand); font-style: normal; transform: rotate(-1deg); }
+.sigline { display: block; position: relative; width: 100%; height: 46px; margin: 14px 0 0; padding: 0; border: 0; border-bottom: 1px solid rgba(42,34,26,.75); background: none; text-align: center; cursor: pointer; }
+.sigline i { display: block; font: 30px/44px var(--hand); font-style: normal; color: var(--ink-pen); opacity: .26; transform: rotate(-2deg); }
+.sigline:hover:not(:disabled) i { opacity: .85; }
+.sigline:disabled { cursor: not-allowed; }
+.sigline span { position: absolute; left: 0; right: 0; top: 100%; margin-top: 3px; font: 9.5px var(--type); color: var(--ink-type); opacity: .7; }
+.sigline.done { cursor: default; } .sigline.done i { opacity: 1; }
+.bl-stamp { position: absolute; right: 16px; bottom: 58px; font-size: 15px; pointer-events: none; }
+
+/* сообщения — машинописная записка, а не всплывающее окно */
+.toast { background: #e3dac3 var(--grain); color: #29252f; border: 0; border-left: 5px solid #6a573e; font: 13.5px/1.42 var(--type); box-shadow: 0 2px 3px rgba(0,0,0,.5), 0 12px 26px rgba(0,0,0,.6); }
+.toast.ex { border-left-color: var(--ink-pen); } .toast.in { border-left-color: var(--pencil); } .toast.bad { color: #4a4438; border-left-color: #8a8272; }
+
+/* фотокарточка: мутный отпечаток */
+.portrait { filter: grayscale(.92) sepia(.2) contrast(1.22) brightness(1.03); }
+
+/* оттиск решения стоит между текстом и подписью, а не поверх текста */
+.post.blank .post-sig { margin-top: 72px; }
+.post.blank .stamp.slam { right: 56px; bottom: 90px; }

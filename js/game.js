@@ -86,6 +86,15 @@
     return CASES[id].docs.filter(d => !d.locked || c.unlocked.includes(d.id)).concat([dirDoc()]);
   }
 
+  /* начало дня: день может начаться позже или с выговором — расплата за прошлые решения (DAYS[].start) */
+  function beginDay() {
+    S.time = 0; S.cur = null; S.phase = 'brief';
+    const d = day(), was = S.trust;
+    S.note = (d.start ? d.start(S) : null) || [];
+    S.trust = clamp(S.trust, 1, 10);
+    S.tnote = S.trust !== was ? [was, S.trust] : null;
+  }
+
   /* ---------- маршрутизация ---------- */
   function go() {
     closeModal();
@@ -161,7 +170,9 @@
       <div class="kicker">${esc(d.kicker)}</div>
       <h1>${esc(d.title)}</h1>
       <div class="dateline">${esc(d.date)} · ${esc(d.place)}</div>
-      ${d.brief.map(p => `<p>${T(p)}</p>`).join('')}
+      ${d.brief.map(fill).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join('')}
+      ${(S.note || []).map(p => `<p class="daynote">${T(p)}</p>`).join('')}
+      ${S.tnote ? `<p class="tdelta down">Доверие руководства: ${S.tnote[0]} → ${S.tnote[1]}</p>` : ''}
       <div class="newdir"><b>К руководству</b>${d.directives.map(x => `<div>— ${esc(x.t)}</div>`).join('')}</div>
       <button class="btn" data-act="todesk">К столу</button>
     </div></div>`;
@@ -251,14 +262,15 @@
     const p = c.pos[d.id];
     let hash = 0; for (const ch of d.id + S.cur) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
     const rot = ((hash % 7) - 3) * 0.3;
+    const ld = CASES[S.cur].docs.findIndex(x => x.id === d.id);
     const lines = d.lines.map(l => {
       const key = d.id + '.' + l.id;
       return `<div class="ln${l.fresh ? ' fresh' : ''}" data-k="${key}">${l.k ? `<span class="k">${esc(l.k)}:</span> ` : ''}<span class="v">${T(l.v)}</span></div>`;
     }).join('');
     return `<div class="doc ${d.kind}${c.fresh.includes(d.id) ? ' new' : ''}" data-doc="${d.id}" style="left:${p.x}px;top:${p.y}px;z-index:${p.z};--r:${rot}deg">
-      <div class="doc-head">${d.org ? `<div class="doc-org">${esc(d.org)}</div>` : ''}
+      ${ld >= 0 ? `<span class="ld">${ld * 3 + 2}</span>` : ''}<div class="doc-head">${d.org ? `<div class="doc-org">${esc(d.org)}</div>` : ''}
         <div class="doc-title">${esc(d.title)}</div>${d.sub ? `<div class="doc-sub">${T(d.sub)}</div>` : ''}</div>
-      ${d.face ? `<div class="face">${portraitSVG(person.face)}</div>` : ''}
+      ${d.face ? `<div class="face">${portraitSVG(person.face, CASES[S.cur].no)}</div>` : ''}
       <div class="doc-body">${lines}</div>
       ${d.face && c.verdict ? `<div class="stamp desk-stamp${ui.slam ? ' slam' : ''}">${esc(CASES[S.cur].verdicts.find(x => x.id === c.verdict).stamp)}</div>` : ''}</div>`;
   }
@@ -302,21 +314,56 @@
       if (map[k]) el.dataset.f = map[k].map(f => f.replace('f_', '')).join(' '); else delete el.dataset.f;
     });
   }
-  function deskProps() {
-    return `<svg class="prop glass" viewBox="0 0 80 80"><ellipse cx="40" cy="44" rx="30" ry="30" fill="rgba(0,0,0,.35)"/><circle cx="38" cy="40" r="27" fill="#8b8f8a"/><circle cx="38" cy="40" r="22" fill="#5a2f17"/><circle cx="38" cy="40" r="22" fill="none" stroke="#c9cdc6" stroke-width="2.5"/><ellipse cx="31" cy="33" rx="8" ry="4" fill="rgba(255,255,255,.18)" transform="rotate(-30 31 33)"/><path d="M63 30 q14 10 0 22" fill="none" stroke="#8b8f8a" stroke-width="5"/></svg>
-    <svg class="prop pad" viewBox="0 0 110 70"><rect x="4" y="8" width="102" height="58" rx="4" fill="rgba(0,0,0,.35)"/><rect x="2" y="2" width="102" height="58" rx="4" fill="#2a2420"/><rect x="9" y="9" width="88" height="44" rx="2" fill="#5b1d1a"/><rect x="9" y="9" width="88" height="44" rx="2" fill="none" stroke="#1a1512" stroke-width="2"/></svg>`;
+  /* рисованных предметов на столе нет: только фототекстуры, свет и сами бумаги */
+  function deskProps() { return ''; }
+
+  /* гербовая печать на постановлении */
+  function sealSVG(t) {
+    return `<svg class="seal" viewBox="0 0 120 120"><defs><path id="sealp" d="M60 60 m-45 0 a45 45 0 1 1 90 0 a45 45 0 1 1 -90 0"/></defs>
+      <circle cx="60" cy="60" r="57" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="60" cy="60" r="53.5" fill="none" stroke="currentColor" stroke-width=".8"/><circle cx="60" cy="60" r="34" fill="none" stroke="currentColor" stroke-width="1"/>
+      <text font-family="Oswald, sans-serif" font-size="9" font-weight="600" fill="currentColor"><textPath href="#sealp" textLength="278" lengthAdjust="spacing">НКВД СССР ★ ${esc(t.toUpperCase())} ★</textPath></text>
+      <path d="M60 36 l4.6 13.4 h14.2 l-11.5 8.4 4.4 13.5 -11.7 -8.3 -11.7 8.3 4.4 -13.5 -11.5 -8.4 h14.2Z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+      <text x="60" y="86" text-anchor="middle" font-family="Oswald, sans-serif" font-size="7" letter-spacing="1.5" fill="currentColor">ДЛЯ ПАКЕТОВ</text></svg>`;
   }
 
-  /* ---------- правая панель: справка, запросы, постановление ---------- */
+  /* ---------- правая сторона стола: справка, бланки запросов, бланк постановления ---------- */
   function findItem(cs, c, id, conf, ro) {
     const fd = cs.findings[id], st = c.struck.includes(id), at = c.att.includes(id), bad = conf.includes(id) && !st;
-    const tag = fd.kind === 'ex' ? 'в пользу обвиняемого' : (fd.w === 1 ? 'уличает косвенно' : 'уличает');
+    const tag = fd.kind === 'ex' ? 'в пользу' : (fd.w === 1 ? 'уличает косвенно' : 'уличает');
     let btn = '';
     if (!ro) {
       if (!st) btn += `<button data-act="attach" data-arg="${id}"${!at && live(c).length >= MAXATT ? ' class="full"' : ''}>${at ? 'снять' : 'подшить'}</button>`;
       if (bad || st) btn += `<button class="bx" data-act="strike" data-arg="${id}">${st ? 'восстановить' : 'вычеркнуть'}</button>`;
     }
-    return `<li class="${fd.kind}${st ? ' struck' : ''}${at ? ' att' : ''}${bad ? ' need' : ''}"><span class="tag">${tag}${at ? ' · подшито к постановлению' : ''}${st ? ' · вычеркнуто' : ''}</span><span class="ft">${T(fd.t)}</span>${btn ? `<span class="fa">${btn}</span>` : ''}</li>`;
+    return `<li class="${fd.kind}${st ? ' struck' : ''}${at ? ' att' : ''}${bad ? ' need' : ''}"><span class="tag">${tag}</span><span class="ft">${T(fd.t)}</span>${btn ? `<span class="fa">${btn}</span>` : ''}</li>`;
+  }
+
+  /* бланк постановления лежит на столе: основания вписаны в три строки, решение подчёркнуто пером, внизу подпись */
+  function blankHTML(cs, c, v, open, ro) {
+    const d = day(), att = ro ? c.att : live(c), sel = ro ? c.verdict : ui.verdict;
+    let lines = '';
+    for (let i = 0; i < MAXATT; i++) {
+      const f = att[i];
+      lines += f ? `<li class="${cs.findings[f].kind}"${ro ? '' : ` data-act="attach" data-arg="${f}" title="Убрать из постановления"`}>${T(cs.findings[f].t)}</li>` : '<li class="empty"></li>';
+    }
+    const vs = cs.verdicts.filter(x => !ro || x.id === sel).map(x =>
+      `<button class="vopt${x.id === sel ? ' on' : ''}" ${ro ? 'disabled' : `data-act="pickv" data-arg="${x.id}"`}><span>${esc(x.label)}</span></button>`).join('');
+    let note = '';
+    if (!ro && open.length) note = `<div class="warn">В справке ${open.length === 1 ? 'осталась запись, которая противоречит' : 'остались записи, которые противоречат'} постановлению. С такой справкой его не утвердят. Вычеркните ${open.length === 1 ? 'её' : 'их'} — или измените решение.</div>`;
+    else if (!ro && v && !att.length) note = '<div class="attn zero">К постановлению ничего не подшито. Подписать можно, но за голую бумагу спросят.</div>';
+    const can = !ro && v && !open.length;
+    return `<div class="blank${ro ? ' done' : ''}">
+      <div class="bl-org">${esc(d.org || ORG)}</div>
+      <div class="bl-h">Постановление</div>
+      <div class="bl-sub">по следственному делу № ${cs.no}</div>
+      <p class="bl-t">Рассмотрев материалы дела, <b>нашёл</b>:</p>
+      <ol class="bl-lines">${lines}</ol>
+      <p class="bl-t"><b>Постановил</b>${ro ? '' : ' <i>(нужное подчеркнуть)</i>'}:</p>
+      <div class="vlist">${vs}</div>
+      ${note}
+      ${ro ? `<div class="sigline done"><i>${esc(S.name)}</i><span>${esc(d.rank)}</span></div><div class="stamp bl-stamp">${esc(v.stamp)}</div>`
+           : `<button class="sigline" data-act="sign" ${can ? '' : 'disabled'}><i>${can ? 'расписаться' : ''}</i><span>${esc(d.rank)} — подпись</span></button>`}
+    </div>`;
   }
 
   function renderSide() {
@@ -330,33 +377,25 @@
     const cs = CASES[S.cur], c = rt(S.cur);
     if (c.verdict) {
       const v = cs.verdicts.find(x => x.id === c.verdict);
-      el.innerHTML = `<div class="clip"><h3>Справка по делу № ${cs.no}</h3>
+      el.innerHTML = `<div class="pile"><div class="sprav"><h3>Справка по делу № ${cs.no}</h3>
         <ul class="finds">${c.found.map(id => findItem(cs, c, id, [], true)).join('') || '<li class="none">Сверкой ничего не установлено.</li>'}</ul>
-        <h4>Постановление</h4><p class="memo fresh">${esc(v.label)}</p>
-        <p class="fine">Дело сдано. Исход — вечером, в газете и в картотеке.</p></div>${debugHTML()}`;
+        <p class="pnote">Дело сдано. Исход — вечером, в газете и в картотеке.</p></div>
+        ${blankHTML(cs, c, v, [], true)}</div>${debugHTML()}`;
       return;
     }
     const v = cs.verdicts.find(x => x.id === ui.verdict);
     const conf = v ? (v.conflicts || []).filter(f => c.found.includes(f)) : [];
     const open = conf.filter(f => !c.struck.includes(f));
-    const natt = live(c).length;
     const reqs = (cs.requests || []).filter(r => !c.unlocked.includes(r.doc)).map(r => {
       const gone = r.if && !r.if(S), late = timeLeft() < r.cost + COST.hit, hint = gone ? r.off : r.hint;
-      return `<button class="req${gone ? ' gone' : ''}${r.manual ? ' own' : ''}" data-act="req" data-arg="${r.id}" ${late || gone ? 'disabled' : ''}><i>${gone ? 'поздно' : late ? 'не успеть' : hm(r.cost)}</i><b>${T(r.label)}</b>${hint ? `<span>${T(hint)}</span>` : ''}</button>`;
+      return `<button class="req${gone ? ' gone' : ''}${r.manual ? ' own' : ''}" data-act="req" data-arg="${r.id}" ${late || gone ? 'disabled' : ''}><em>${r.manual ? 'На подпись' : 'Запрос'}</em><i>${gone ? 'поздно' : late ? 'не успеть' : hm(r.cost)}</i><b>${T(r.label)}</b>${hint ? `<span>${T(hint)}</span>` : ''}</button>`;
     }).join('');
-    const vs = cs.verdicts.map(x => `<button class="vopt${x.id === ui.verdict ? ' on' : ''}" data-act="pickv" data-arg="${x.id}"><s></s><span>${esc(x.label)}</span></button>`).join('');
-    let status = '';
-    if (open.length) status = `<div class="warn">В справке ${open.length === 1 ? 'осталась запись, которая противоречит' : 'остались записи, которые противоречат'} постановлению. С такой справкой его не утвердят. Вычеркните ${open.length === 1 ? 'её' : 'их'} — или измените решение.</div>`;
-    else if (v) status = `<div class="attn${natt ? '' : ' zero'}">${natt ? 'Подшито оснований: ' + natt + ' из ' + MAXATT + '.' : 'К постановлению ничего не подшито. Подписать можно, но за голую бумагу спросят.'}</div>`;
-    el.innerHTML = `<div class="clip">
-      <h3>Справка по делу № ${cs.no}</h3>
-      <p class="legend">Сверка: сошлось или близко — ${COST.hit} мин, совсем мимо — ${COST.miss} мин. В бланке постановления ${MAXATT} строки для оснований.</p>
-      <ul class="finds">${c.found.map(id => findItem(cs, c, id, conf, false)).join('') || '<li class="none">Сверкой пока ничего не установлено.</li>'}</ul>
-      ${reqs ? `<h4>Запросы</h4><div class="reqs">${reqs}</div>` : ''}
-      <h4>Постановление</h4>
-      <div class="vlist">${vs}</div>
-      ${status}
-      <button class="btn sign" data-act="sign" ${!v || open.length ? 'disabled' : ''}>Подписать</button>
+    el.innerHTML = `<div class="pile">
+      <div class="sprav"><h3>Справка по делу № ${cs.no}</h3>
+        <ul class="finds">${c.found.map(id => findItem(cs, c, id, conf, false)).join('') || '<li class="none">Сверкой пока ничего не установлено.</li>'}</ul>
+        <p class="pnote">сверка — ${COST.hit} мин, мимо — ${COST.miss} мин</p></div>
+      ${reqs ? `<div class="slips">${reqs}</div>` : ''}
+      ${blankHTML(cs, c, v, open, false)}
     </div>${debugHTML()}`;
   }
   const hm = m => (m >= 60 ? Math.floor(m / 60) + ' ч' + (m % 60 ? ' ' + (m % 60) + ' мин' : '') : m + ' мин');
@@ -438,19 +477,32 @@
     ui.busy = true; ui.slam = true; ui.sverka = false; refresh(true); ui.slam = false;
     const sf = $('#surface'); if (sf) { sf.classList.add('thud'); const st = $('.desk-stamp', sf); if (st) st.parentNode.style.zIndex = ++ui.z; }
     setTimeout(() => snd('stamp'), 240);
-    setTimeout(() => { ui.busy = false; if (sf) sf.classList.remove('thud'); openModal(`<div class="sheet post">
-      <div class="doc-org">${esc(day().org || ORG)}</div>
-      <div class="post-h">Постановление</div><div class="post-sub">по делу № ${cs.no}, ${esc(day().date)}</div>
-      <p>Я, ${esc(day().rank)} ${esc(day().unit || 'Студенецкого РО НКВД')} ${esc(S.name)}, рассмотрев материалы дела по обвинению гр. ${esc(cs.person.name.replace(/\s*\(.*\)/, ''))},</p>
-      <p class="post-c">постановил:</p>
-      <p class="post-v">${esc(v.label)}</p>
-      <div class="post-gr"><b>Основания (подшито к постановлению)</b>${c.att.length ? lst(c.att, 'g') : '<em>не подшито</em>'}</div>
-      ${c.struck.length ? `<div class="post-gr"><b>Из справки по делу исключено</b>${lst(c.struck, 'st')}</div>` : ''}
-      <div class="post-sig"><span>${esc(day().rank)}</span><i>${esc(S.name)}</i></div>
-      <div class="stamp slam">${esc(v.stamp)}</div>
-      <div class="resol"><b>${esc(day().bossTitle || 'Резолюция начальника РО')}</b><i>${T(reply)}</i>${last ? `<i class="ps">${esc(day().ps || 'И последнее. Ещё одна бумага мне поперёк — сдашь наган и удостоверение.')}</i>` : ''}<span>— ${esc(day().boss || 'Ломов')}</span></div>
-      <div class="tdelta${S.trust < was ? ' down' : S.trust > was ? ' up' : ''}">Доверие руководства: ${was} → ${S.trust}</div>
-      <button class="btn" data-act="afterv">Сдать папку</button></div>`); }, 850);
+    setTimeout(() => { ui.busy = false; if (sf) sf.classList.remove('thud');
+      const d = day(), nm = esc(S.name), boss = esc(d.boss || 'Ломов');
+      const fnd = c.att.length
+        ? `<ol class="post-fnd">${c.att.map(f => `<li class="${cs.findings[f].kind}">${T(cs.findings[f].t)}</li>`).join('')}</ol>`
+        : '<p class="post-none">оснований к постановлению не приобщено</p>';
+      const excl = c.struck.length
+        ? `<div class="post-excl"><b>Из справки по делу исключено:</b>${c.struck.map(f => `<span>${T(cs.findings[f].t)}</span>`).join('')}<i>исключено — ${nm}</i></div>` : '';
+      openModal(`<div class="post-wrap"><div class="sheet post blank">
+        <div class="post-top">
+          <div class="post-res"><i>${T(reply)}</i>${last ? `<i class="ps">${esc(d.ps || 'И последнее. Ещё одна бумага мне поперёк — сдашь наган и удостоверение.')}</i>` : ''}</div>
+          <div class="post-utv"><b>«Утверждаю»</b><span>${esc(d.bossPost || 'Нач. Студенецкого РО НКВД')}</span><em>${boss}</em><span>${esc(d.date)}</span></div>
+        </div>
+        <div class="post-h">Постановление</div>
+        <div class="post-sub">по следственному делу № ${cs.no}</div>
+        <div class="post-city"><span>${esc(d.city || 'с. Студёное')}</span><span>${esc(d.date)}</span></div>
+        <p>Я, ${esc(d.rank)} ${esc(d.unit || 'Студенецкого РО НКВД')} ${nm}, рассмотрев следственное дело № ${cs.no} (обвиняемый — ${esc(cs.person.name.replace(/\s*\(.*\)/, ''))}),</p>
+        <p class="post-c">нашёл:</p>
+        ${fnd}${excl}
+        <p class="post-c">постановил:</p>
+        <p class="post-v">${esc(v.label)}</p>
+        <div class="post-sig"><span>${esc(d.rank)}</span><i>${nm}</i><span>(${nm})</span></div>
+        ${sealSVG(d.seal || 'Студенецкое РО')}
+        <div class="stamp slam">${esc(v.stamp)}</div>
+      </div>
+      <div class="post-foot"><div class="tdelta${S.trust < was ? ' down' : S.trust > was ? ' up' : ''}">Доверие руководства: ${was} → ${S.trust}</div>
+        <button class="btn" data-act="afterv">Сдать папку</button></div></div>`); }, 850);
   }
   function afterVerdict() {
     closeModal();
@@ -494,7 +546,7 @@
     } else if (S.step === 1) {
       const sc = it.scene;
       app.innerHTML = `<div class="center-scr"><div class="sheet brief"><div class="kicker">${esc(sc.kicker)}</div><h1>${esc(sc.title)}</h1>
-        <div class="dateline">${esc(sc.date)}</div>${sc.text.map(p => `<p>${T(p)}</p>`).join('')}
+        <div class="dateline">${esc(sc.date)}</div>${sc.text.map(fill).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join('')}
         <button class="btn" data-act="actend">Сдать дела в архив</button></div></div>`;
     } else {
       const ar = it.arch;
@@ -522,10 +574,10 @@
     const cards = S.cards.map(k => {
       const cs = CASES[k.c], v = cs.verdicts.find(x => x.id === k.v), known = k.day < S.day || S.phase !== 'desk';
       const c = rt(k.c);
-      return `<div class="card"><div class="face">${portraitSVG(cs.person.face)}</div><div>
+      return `<div class="card"><div class="face">${portraitSVG(cs.person.face, cs.no)}</div><div>
         <b>${esc(cs.person.name)}</b><span>Дело № ${cs.no} · ${esc(DAYS[k.day].date)}</span>
         <span>${esc(v.short)} · подшито оснований: ${c.att.length}${c.struck.length ? ` · вычеркнуто из справки: ${c.struck.length}` : ''}</span>
-        <em>${known ? T(v.fate) : 'Исход пока неизвестен.'}</em>
+        <em>${known ? T(v.fate) : 'Исход пока неизвестен.'}</em>${(cs.epilog || []).filter(e => e.if(S)).map(e => `<em class="epi">${T(e.t)}</em>`).join('')}
         <i>Подписал: ${esc(S.name)}</i></div></div>`;
     }).join('');
     openModal(`<div class="sheet cards"><h2>Картотека</h2>${cards || '<p class="fine">Карточек пока нет.</p>'}<button class="btn" data-act="close">Закрыть</button></div>`);
@@ -595,7 +647,7 @@
       cs.pairs.forEach(p => { if (!c.found.includes(p.f) && [p.a, p.b].every(k => vis.includes(k.split('.')[0]))) { c.found.push(p.f); c.hits.push(p.a, p.b); } });
       save(); return refresh(true);
     }
-    if (a.startsWith('day')) { S.day = +a.slice(3); S.time = 0; S.cur = null; S.phase = 'brief'; save(); return go(); }
+    if (a.startsWith('day')) { S.day = +a.slice(3); beginDay(); save(); return go(); }
     save(); refresh();
   }
 
@@ -642,12 +694,12 @@
     endday() { S.phase = 'evening'; S.cur = null; save(); go(); },
     next() {
       if (day().inter) { S.phase = 'inter'; S.step = 0; }
-      else { S.day++; S.time = 0; S.phase = 'brief'; }
+      else { S.day++; beginDay(); }
       save(); go();
     },
     inter() { S.step = 1; save(); go(); },
     actend() { const it = INTERS[day().inter]; if (it.ending) return ending(it.ending); S.step = 2; save(); go(); },
-    nextact() { if (S.day >= DAYS.length - 1) return; S.day++; S.time = 0; S.cur = null; S.ending = null; S.phase = 'brief'; save(); go(); },
+    nextact() { if (S.day >= DAYS.length - 1) return; S.day++; S.ending = null; beginDay(); save(); go(); },
     cards() { showCards(); },
     papers(i) { showPapers(i); },
     close() { closeModal(); },
