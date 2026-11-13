@@ -151,6 +151,10 @@
 
 `INTER` — газета и сцена между актами. `ENDINGS` — `kicker, title, text[]`.
 
+### Телефон
+
+`body.mob` ставит `applyView()` по `matchMedia('(max-width: 899px), (pointer: coarse) and (max-width: 1179px)')` или по выбору в меню (`chekist.view`: `auto` / `mob` / `desk`). На телефоне `place()`/`pack()` не работают, бумаги идут потоком; вкладка — `ui.mtab` и `.desk[data-tab]`; строки выбираются по `click`. Все правила вида — в последнем блоке `css/game.css`. Новые экраны надо проверять и на 375 px.
+
 ### Что добавил акт IV
 
 | Поле | Смысл |

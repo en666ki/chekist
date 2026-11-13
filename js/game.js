@@ -8,9 +8,29 @@
   let S = null;
   let DBG = /[?&]debug\b/.test(location.search);
   try { DBG = DBG || localStorage.getItem(DBGKEY) === '1'; } catch (e) { /* хранилище недоступно */ }
-  const ui = { sel: null, sverka: false, verdict: null, z: 20, toastT: 0, busy: false, slam: false };
+  const ui = { sel: null, sverka: false, verdict: null, z: 20, toastT: 0, busy: false, slam: false, mtab: 'inbox' };
   let MUTE = false;
   try { MUTE = localStorage.getItem('chekist.mute') === '1'; } catch (e) { /* хранилище недоступно */ }
+
+  /* телефон: узкий экран или палец на экране шириной меньше настольного стола */
+  const MQ = window.matchMedia('(max-width: 899px), (pointer: coarse) and (max-width: 1179px)');
+  let VIEW = 'auto', MOB = false;
+  try { VIEW = localStorage.getItem('chekist.view') || 'auto'; } catch (e) { /* хранилище недоступно */ }
+  function applyView() {
+    const m = VIEW === 'auto' ? MQ.matches : VIEW === 'mob';
+    const changed = m !== MOB; MOB = m;
+    document.body.classList.toggle('mob', MOB);
+    return changed;
+  }
+  applyView();
+  const onMQ = () => { if (VIEW === 'auto' && applyView() && S) go(); };
+  if (MQ.addEventListener) MQ.addEventListener('change', onMQ); else if (MQ.addListener) MQ.addListener(onMQ);
+  /* на телефоне стол — три вкладки: папки, бумаги, справка */
+  function setTab(t) { ui.mtab = t; const d = document.querySelector('.desk'); if (d) d.dataset.tab = t; markNav(); window.scrollTo(0, 0); }
+  function markNav() {
+    document.querySelectorAll('.mnav button').forEach(b => b.classList.toggle('on', b.dataset.arg === ui.mtab));
+    const n = document.querySelector('.mnav [data-arg=desk] i'); if (n) n.textContent = S && S.cur ? (CASES[S.cur].album ? 'список № ' : CASES[S.cur].ro || CASES[S.cur].statement ? '' : 'дело № ') + (CASES[S.cur].ro || CASES[S.cur].statement ? 'личное дело' : CASES[S.cur].no) : 'пусто';
+  }
 
   const $ = (q, el) => (el || document).querySelector(q);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -260,7 +280,8 @@
   /* ---------- стол ---------- */
   function renderDesk() {
     const d = day();
-    app.innerHTML = `<div class="desk">
+    if (!S.cur) ui.mtab = 'inbox';
+    app.innerHTML = `<div class="desk" data-tab="${ui.mtab}">
       <header class="bar">
         <div class="bar-l"><b>${esc(d.office || 'Студенецкое РО НКВД')}</b><span>${esc(d.date)}</span></div>
         <div class="bar-c"><span class="clock" id="clock"></span><span class="trust" id="trust"></span></div>
@@ -270,14 +291,15 @@
       <main class="surface" id="surface"></main>
       <aside class="side" id="side"></aside>
       <div class="toast" id="toast"></div>
+      <nav class="mnav"><button data-act="mtab" data-arg="inbox">Папки<i>входящие</i></button><button data-act="mtab" data-arg="desk">Стол<i></i></button><button data-act="mtab" data-arg="side">Справка<i>решение</i></button></nav>
     </div>`;
     refresh(true);
   }
-  function refresh(full) { if (!$('#clock')) return; renderBar(); renderInbox(); if (full) renderSurface(); else markLines(); renderSide(); }
+  function refresh(full) { if (!$('#clock')) return; renderBar(); renderInbox(); if (full) renderSurface(); else markLines(); renderSide(); markNav(); }
 
   function renderBar() {
     const left = timeLeft();
-    const over = S.ot && S.time >= day().minutes;
+    const over = !!(S.ot && S.time >= day().minutes);
     $('#clock').innerHTML = `<b>${hhmm(S.time)}</b> <i>${left > 0 ? (over ? 'сверхурочно, до ' : 'рабочий день до ') + hhmm(limit()) : 'рабочий день окончен'}</i>`;
     $('#clock').classList.toggle('over', over);
     $('#clock').classList.toggle('late', left <= 60);
@@ -320,6 +342,7 @@
   }
 
   function place(c, docs) {
+    if (MOB) return; /* на телефоне бумаги лежат стопкой, координаты не нужны */
     const sf = $('#surface'), W = sf.clientWidth, H = sf.clientHeight;
     const cols = W >= 760 ? 3 : 2, rows = Math.ceil(docs.length / cols);
     const dw = clamp(Math.floor((W - 70) / cols) - 12, 290, 390);
@@ -336,6 +359,7 @@
 
   /* разложить бумаги колонками по их настоящей высоте; не помещаются — внахлёст, но заголовок каждой виден */
   function pack() {
+    if (MOB) return;
     const sf = $('#surface'); if (!sf || !S.cur) return;
     const c = rt(S.cur), els = [...sf.querySelectorAll('.doc')]; if (!els.length) return;
     const W = sf.clientWidth, H = sf.clientHeight, dw = els[0].offsetWidth, top = 60, gap = 14, avail = H - top - 14;
@@ -357,7 +381,7 @@
   }
 
   function docHTML(d, c, person, cs, mark) {
-    const p = c.pos[d.id];
+    const p = c.pos[d.id] || { x: 0, y: 0, z: 1 };
     let hash = 0; for (const ch of d.id + S.cur) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
     const rot = ((hash % 7) - 3) * 0.3;
     const ld = cs.docs.findIndex(x => x.id === d.id);
@@ -382,10 +406,12 @@
       sf.innerHTML = `<div class="baize"></div>${deskProps()}<div class="empty-hint">${allDone() ? 'Все папки сданы.' : 'Возьмите папку из «Входящих».'}</div>`;
       return;
     }
-    const X = ctx(), cs = X.cs, c = X.c, docs = X.docs;
+    const X = ctx(), cs = X.cs, c = X.c;
+    /* на телефоне только что принесённая бумага ложится наверх стопки */
+    const docs = MOB ? X.docs.slice().sort((a, b) => (c.fresh.includes(b.id) ? 1 : 0) - (c.fresh.includes(a.id) ? 1 : 0)) : X.docs;
     const first = !Object.keys(c.pos).length;
     place(c, docs);
-    ui.z = Math.max(ui.z, ...Object.values(c.pos).map(p => p.z));
+    ui.z = Math.max(ui.z, ...Object.values(c.pos).map(p => p.z), 20);
     let strip = `<b>${CASES[S.cur].ro || CASES[S.cur].statement ? esc(CASES[S.cur].title) : 'Дело № ' + cs.no}</b> · ${T(CASES[S.cur].person ? CASES[S.cur].person.name : '')} · ${T(CASES[S.cur].charge)}${c.verdict ? ' · сдано, только чтение' : ''}`;
     let mark = null;
     if (X.alb) {
@@ -397,7 +423,7 @@
       <div class="case-strip">${strip}</div>
       ${docs.map(d => docHTML(d, c, cs.person, cs, mark)).join('')}
       <button class="tidy-btn${c.verdict ? ' solo' : ''}" data-act="tidy" title="Разложить бумаги по столу (R)">Разложить</button>
-      ${c.verdict || CASES[S.cur].ro ? '' : `<button class="sv-btn" data-act="sverka">Сверка <kbd>пробел</kbd></button>`}`;
+      ${c.verdict || CASES[S.cur].ro ? '' : `<button class="sv-btn" data-act="sverka">Сверка ${MOB ? '' : '<kbd>пробел</kbd>'}</button>`}`;
     if (first) pack();
     markLines();
   }
@@ -555,7 +581,7 @@
   /* ---------- сверка ---------- */
   function pick(k) {
     const X = ctx(), c = X.c, cs = X.cs;
-    if (!ui.sel) { ui.sel = k; snd('pick'); markLines(); return; }
+    if (!ui.sel) { ui.sel = k; snd('pick'); markLines(); if (MOB) toast('Строка выбрана. Теперь вторая — в этой бумаге или в другой. Тронь ту же строку, чтобы отменить.'); return; }
     if (ui.sel === k) { ui.sel = null; markLines(); return; }
     const a = ui.sel, b = k; ui.sel = null;
     const p = cs.pairs.find(x => (x.a === a && x.b === b) || (x.a === b && x.b === a));
@@ -746,9 +772,9 @@
     closeModal();
     if (S.pendEnd) { const e = S.pendEnd; S.pendEnd = null; return ending(e); }
     if (S.trust <= 0) return ending(day().fired || 'e_fired');
-    if (isAlb(S.cur)) { S.cur = null; save(); return refresh(true); }
+    if (isAlb(S.cur)) { S.cur = null; save(); if (MOB) setTab('inbox'); return refresh(true); }
     if (S.trust <= 0) return ending(day().fired || 'e_fired');
-    S.cur = null; ui.verdict = null; ui.sel = null; save(); refresh(true);
+    S.cur = null; ui.verdict = null; ui.sel = null; save(); if (MOB) setTab('inbox'); refresh(true);
   }
   function ending(id) { S.phase = 'end'; S.ending = id; save(); go(); }
 
@@ -969,10 +995,12 @@
     guideok() { S.phase = 'brief'; save(); go(); },
     guide() { openModal(`<div class="sheet guide-sheet">${guideHTML()}<div class="guide-foot"><span></span><button class="btn" data-act="close">Закрыть</button></div></div>`); },
     todesk() { S.phase = 'desk'; S.cur = null; save(); go(); },
-    open(id) { S.cur = S.cur === id ? null : id; ui.sel = null; ui.verdict = null; snd('folder'); refresh(true); save(); },
+    open(id) { S.cur = S.cur === id ? null : id; ui.sel = null; ui.verdict = null; snd('folder'); if (MOB) ui.mtab = S.cur ? 'desk' : 'inbox'; const d = $('.desk'); if (d) d.dataset.tab = ui.mtab; refresh(true); save(); if (MOB) window.scrollTo(0, 0); },
+    mtab(t) { setTab(t); },
+    view() { VIEW = VIEW === 'auto' ? (MOB ? 'desk' : 'mob') : 'auto'; try { localStorage.setItem('chekist.view', VIEW); } catch (e) { /* не запомнится */ } closeModal(); applyView(); go(); },
     card(id) {
       const c = rt(S.cur); if (c.sel === id) return;
-      c.sel = id; c.pos = {}; c.fresh = []; ui.sel = null; snd('paper'); save(); refresh(true);
+      c.sel = id; c.pos = {}; c.fresh = []; ui.sel = null; snd('paper'); save(); refresh(true); if (MOB) setTab('desk');
     },
     amark(v) {
       const c = rt(S.cur), k = curCard(); if (c.signed) return;
@@ -985,7 +1013,7 @@
       if (!k.app || cc.unlocked.includes('p') || timeLeft() < (k.cost || 40) + COST.hit) return;
       spend(k.cost || 40); cc.unlocked.push('p'); c.fresh.push('p');
       const sf = $('#surface'); c.pos.p = { x: Math.round(sf.clientWidth / 2 - 140), y: 120, z: ++ui.z };
-      save(); refresh(true); snd('knock');
+      save(); refresh(true); snd('knock'); if (MOB) setTab('desk');
       toast('Через ' + hm(k.cost || 40) + ' принесли: «' + k.app.title + '». Сверьте со справкой.');
     },
     asign(d) { signAlbum(d); },
@@ -1003,7 +1031,7 @@
       if (r.flag && !S.flags.includes(r.flag)) S.flags.push(r.flag);
       const sf = $('#surface'), doc = cs.docs.find(d => d.id === r.doc);
       c.pos[r.doc] = { x: Math.round(sf.clientWidth / 2 - 160), y: 90, z: ++ui.z };
-      save(); refresh(true); snd('knock');
+      save(); refresh(true); snd('knock'); if (MOB) setTab('desk');
       toast(r.toast ? fill(r.toast) : 'Через ' + hm(r.cost) + ' принесли ответ: «' + doc.title + '». Он лежит поверх бумаг — сверьте его с остальными.');
     },
     pickv(id) { ui.verdict = ui.verdict === id ? null : id; renderSide(); },
@@ -1057,7 +1085,7 @@
     menu() {
       openModal(`<div class="sheet cards"><h2>Меню</h2><p class="fine">Игра сохраняется сама после каждого действия.</p>
         <p class="fine">Режим отладки (F2) показывает, какие строки сверяются, что нужно подшить и куда ведёт каждое постановление.</p>
-        <div class="ev-btns menu-btns"><button class="btn ghost" data-act="totitle">На титул</button><button class="btn ghost" data-act="guide">Порядок работы</button><button class="btn ghost" data-act="mute">Звук: ${MUTE ? 'включить' : 'выключить'}</button><button class="btn ghost" data-act="dbgtoggle">Отладка: ${DBG ? 'выключить' : 'включить'}</button><button class="btn" data-act="close">Вернуться</button></div></div>`);
+        <div class="ev-btns menu-btns"><button class="btn ghost" data-act="totitle">На титул</button><button class="btn ghost" data-act="guide">Порядок работы</button><button class="btn ghost" data-act="view">Вид: ${VIEW === 'auto' ? 'сам (' + (MOB ? 'телефон' : 'стол') + ')' : VIEW === 'mob' ? 'телефон' : 'стол'}</button><button class="btn ghost" data-act="mute">Звук: ${MUTE ? 'включить' : 'выключить'}</button><button class="btn ghost" data-act="dbgtoggle">Отладка: ${DBG ? 'выключить' : 'включить'}</button><button class="btn" data-act="close">Вернуться</button></div></div>`);
     },
     dbgtoggle() { closeModal(); setDebug(!DBG); },
     dbgoff() { setDebug(false); },
@@ -1069,6 +1097,16 @@
   };
 
   document.addEventListener('click', e => {
+    /* на телефоне строку выбирают касанием (click), чтобы прокрутка пальцем не выбирала строки */
+    if (MOB && S && S.cur && !ui.busy) {
+      const doc = e.target.closest('.surface .doc');
+      if (doc) {
+        const c = ctx().c, fi = c.fresh.indexOf(doc.dataset.doc);
+        if (fi >= 0) { c.fresh.splice(fi, 1); doc.classList.remove('new'); }
+        const ln = e.target.closest('.ln');
+        if (ui.sverka && ln && !c.verdict) { pick(ln.dataset.k); return; }
+      }
+    }
     const b = e.target.closest('[data-act]');
     if (!b || b.disabled || ui.busy) return;
     const f = ACT[b.dataset.act];
@@ -1078,6 +1116,7 @@
 
   /* перетаскивание бумаг и выбор строк */
   app.addEventListener('pointerdown', e => {
+    if (MOB) return; /* на телефоне бумаги не таскают: стопка листается пальцем */
     const doc = e.target.closest('.surface .doc');
     if (!doc || !S || !S.cur || ui.busy) return;
     const c = ctx().c, id = doc.dataset.doc, p = c.pos[id];

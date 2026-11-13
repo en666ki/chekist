@@ -718,3 +718,98 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; }
 .doc.stamped { padding-bottom: 62px; }
 .doc.stamped .desk-stamp { bottom: 14px; }
 .doc.stamped .pmark { bottom: 12px; }
+
+/* ============================================================
+   ТЕЛЕФОН (body.mob): стол — три вкладки, бумаги — стопкой, всё в ширину экрана.
+   Включается сам на узком экране; переключается в меню.
+   ============================================================ */
+.mnav { display: none; }
+body.mob { min-width: 0; }
+.mob .title-scr, .mob .center-scr { padding: 14px 10px 26px; justify-content: flex-start; }
+.mob .folder-art { width: 100%; padding: 36px 18px 28px; transform: none; }
+.mob .fa-h { font-size: 50px; letter-spacing: .06em; margin: 20px 0 10px; }
+.mob .fa-top { font-size: 12px; } .mob .fa-sub { font-size: 11px; line-height: 1.6; }
+.mob .fa-stamp { right: 8px; top: 30px; font-size: 11px; }
+.mob .fa-btns { flex-direction: column; align-items: stretch; }
+.mob .title-foot { text-align: center; font-size: 11px; letter-spacing: .14em; }
+.mob .brief, .mob .form-sheet, .mob .guide-sheet, .mob .cards, .mob .papers, .mob .sheet.epi, .mob .sheet.home,
+.mob .evnote, .mob .letter, .mob .letter.note, .mob .paper, .mob .ev-head { width: 100%; max-width: 100%; }
+.mob .brief { padding: 22px 16px 20px; font-size: 15px; line-height: 1.55; }
+.mob .brief h1 { font-size: 28px; }
+.mob .brief .btn, .mob .form-sheet .btn { width: 100%; }
+.mob .form-sheet { padding: 22px 16px; }
+.mob .fl { flex-wrap: wrap; gap: 2px; } .mob .fl span { width: 100%; }
+.mob .guide-sheet { padding: 20px 16px; } .mob .guide { grid-template-columns: 1fr; }
+.mob .guide-foot { flex-direction: column; align-items: stretch; }
+.mob .evening { padding: 12px 8px 40px; }
+.mob .ev-head { flex-direction: column; gap: 2px; font-size: 10px; }
+.mob .paper { padding: 12px 12px 16px; }
+.mob .mast-h { font-size: 34px; } .mob .mast-l { font-size: 10px; }
+.mob .mast-s { flex-direction: column; gap: 2px; font-size: 10px; }
+.mob .cols { column-count: 1; }
+.mob .cols article.big h4 { font-size: 22px; }
+.mob .letter { font-size: 18px; line-height: 26px; padding: 16px 16px; transform: none; }
+.mob .ev-btns { flex-wrap: wrap; }
+.mob .ev-btns .btn { flex: 1 1 140px; }
+.mob .epi-list ol { max-height: none; }
+
+/* окна поверх стола */
+.mob #overlay { padding: 6px; align-items: flex-start; }
+.mob .modal { width: 100%; }
+.mob .post-wrap { width: 100%; }
+.mob .sheet.post { width: 100%; padding: 18px 14px; }
+.mob .post.blank { width: 100%; padding: 16px 14px 28px 26px; font-size: 12.5px; }
+.mob .post.blank p { text-indent: 1em; }
+.mob .post-top { flex-direction: column; gap: 6px; min-height: 0; }
+.mob .post-utv { flex: none; align-self: flex-end; }
+.mob .post-res { margin: 6px 0 4px; font-size: 17px; }
+.mob .post.blank .post-h { font-size: 18px; letter-spacing: .2em; text-indent: .2em; }
+.mob .post-city { font-size: 11.5px; }
+.mob .seal { left: auto; right: 18px; bottom: 8px; width: 84px; }
+.mob .post.blank .stamp.slam { right: 18px; bottom: 104px; font-size: 15px; }
+.mob .alpost .al-rows { columns: 1; }
+.mob .post-foot { flex-direction: column; gap: 8px; align-items: stretch; }
+.mob .cards { padding: 18px 14px; } .mob .card .face { flex-basis: 58px; }
+.mob .papers { padding: 10px; } .mob .tabs .tab { font-size: 11px; }
+
+/* стол на телефоне */
+.mob .desk { display: block; height: auto; min-height: 100vh; overflow: visible; padding-bottom: 66px; }
+.mob .desk::after { display: none; }
+.mob .bar { position: sticky; top: 0; z-index: 9000; flex-wrap: wrap; gap: 2px 10px; padding: 6px 10px; height: auto; }
+.mob .bar-l { width: 100%; display: flex; justify-content: space-between; }
+.mob .bar-l b { font-size: 10.5px; margin: 0; }
+.mob .bar-l span { font-size: 11px; }
+.mob .trust i, .mob .trust em, .mob .clock i { display: none; }
+.mob .bar-c { gap: 12px; } .mob .clock b { font-size: 18px; }
+.mob .clock.over b::after { content: ' сверх'; font: 10px var(--type); }
+.mob .pips { gap: 2px; } .mob .pips s { width: 7px; height: 12px; }
+.mob .bar-r { margin-left: auto; } .mob .bar-r button { padding: 4px 6px; margin-left: 0; font-size: 10.5px; letter-spacing: .08em; }
+.mob .inbox, .mob .surface, .mob .side { display: none; }
+.mob .desk[data-tab=inbox] .inbox, .mob .desk[data-tab=side] .side { display: block; padding: 14px 12px 24px; overflow: visible; }
+.mob .desk[data-tab=desk] .surface { display: block; }
+.mob .folder { padding: 22px 14px 12px 16px; }
+.mob .sticky { font-size: 18px; }
+.mob .surface { position: relative; overflow: visible; touch-action: auto; min-height: calc(100vh - 120px); padding: 54px 10px 90px;
+  background: linear-gradient(rgba(10,6,3,.45), rgba(10,6,3,.6)), #2a1a10 url(../assets/tex/wood.jpg) 0 0 / 600px; }
+.mob .surface .baize { display: none; }
+.mob .case-strip { position: absolute; left: 12px; right: 12px; top: 12px; white-space: normal; font-size: 12px; line-height: 1.35; }
+.mob .tidy-btn { display: none; }
+.mob .sv-btn { position: fixed; right: 12px; top: auto; bottom: 74px; padding: 10px 18px; z-index: 9050; }
+.mob .surface .doc { position: relative !important; left: auto !important; top: auto !important; width: auto; max-height: none; overflow: visible;
+  transform: none; margin: 0 0 16px; cursor: default; user-select: text; }
+.mob .surface.sverka .ln { cursor: pointer; }
+.mob .doc.dir, .mob .doc.resol { width: auto; max-height: none; }
+.mob .doc .face { width: 84px; }
+.mob .doc.hand { font-size: 17px; }
+.mob .empty-hint { position: static; padding: 70px 10px; }
+.mob .side .pile { gap: 16px; }
+.mob .side .clip { min-height: 0; }
+.mob .toast { left: 8px; right: 8px; bottom: 70px; max-width: none; transform: translate(0, 20px); }
+.mob .toast.show { transform: none; }
+.mob .mnav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 9100; height: 60px;
+  background: linear-gradient(rgba(8,5,3,.82), rgba(8,5,3,.94)), url(../assets/tex/leather2.jpg) 0 0 / 420px; border-top: 1px solid #000; box-shadow: 0 -3px 8px rgba(0,0,0,.6);
+  padding-bottom: env(safe-area-inset-bottom, 0); }
+.mob .mnav button { flex: 1; border: 0; background: none; color: rgba(215,180,106,.7); font: 600 13px var(--caps); letter-spacing: .14em; text-transform: uppercase; }
+.mob .mnav button i { display: block; margin-top: 2px; font: 10px var(--type); letter-spacing: 0; text-transform: none; font-style: normal; opacity: .7; }
+.mob .mnav button.on { color: #f0d79a; box-shadow: inset 0 3px 0 #d7b46a; }
+.mob .dbg { font-size: 11px; }
