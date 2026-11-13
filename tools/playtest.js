@@ -60,30 +60,36 @@
   Object.assign(FAIR, { timof: 'vstop', krivo: 'v2', hlyst: 'v2', zarec: 'vfree' });
   Object.assign(MID, { timof: 'v2', krivo: 'v2', hlyst: 'v2', zarec: 'voso' });
   /* alb: proposed — как предложил Пескарёв, fair — проверять и возвращать оправданных, kind — всех на доследование, lazy — не открывать */
+  /* акт IV: дело Пескарёва; b — как вести жалобы и что писать в показаниях */
+  Object.assign(HARSH, { pesk: 'vconsp' }); Object.assign(KIND, { pesk: 'v193' }); Object.assign(FAIR, { pesk: 'v193' }); Object.assign(MID, { pesk: 'vconsp' });
+  const B_LAZY = { rv: 'drawer', dead: 'lie', stance: 'part', wit: true }, B_DENY = { rv: 'keep', dead: 'lie', stance: 'deny', wit: true };
+  const B_HONEST = { rv: 'prot', dead: 'truth', stance: 'admit', wit: true }, B_PROT = { rv: 'prot', dead: 'lie', stance: 'part', wit: true };
   const A_HARSH = { alb: 'proposed', kin: '1', date: '14' }, A_KIND = { alb: 'kind', kin: 'r', date: '16' };
   const A_FAIR = { alb: 'fair', kin: 'r', date: '16', stay: true }, A_MID = { alb: 'proposed', kin: 'o', date: '14' };
   const SVOI = { chern: ['r_svoi'] };
   const STRATS = {
-    'ленивый каратель': { find: false, v: HARSH, a: { alb: 'lazy' } },
+    'ленивый каратель': { find: false, v: HARSH, a: { alb: 'lazy' }, b: B_LAZY },
+    'ленивый каратель, при Берии протестует': { find: false, v: HARSH, a: { alb: 'lazy' }, b: B_PROT },
+    'честный III, отвод, защищается': { find: true, v: Object.assign({}, FAIR, { chern: 'voso' }), req: SVOI, a: Object.assign({}, A_FAIR, { kin: 'o' }), b: Object.assign({}, B_PROT, { dead: 'truth' }) },
     'ленивый добряк': { find: false, v: KIND, a: A_KIND },
     'честный': { find: true, v: FAIR, a: A_FAIR },
-    'честный III, остаётся по вечерам': { find: true, v: Object.assign({}, FAIR, { chern: 'voso' }), req: SVOI, a: A_FAIR },
-    'честный III, уходит домой вовремя': { find: true, v: Object.assign({}, FAIR, { chern: 'voso' }), req: SVOI, a: Object.assign({}, A_FAIR, { stay: false }) },
-    'честный III, тесть — вторая, дата 14-м': { find: true, v: Object.assign({}, FAIR, { chern: 'voso' }), req: SVOI, a: Object.assign({}, A_FAIR, { kin: '2', date: '14' }) },
-    'компромисс III: оправданных — во вторую': { find: true, v: Object.assign({}, MID, { chern: 'voso' }), req: SVOI, a: Object.assign({}, A_FAIR, { soft: true, kin: '2', date: '14' }) },
-    'честный III, отвод за тестя': { find: true, v: Object.assign({}, FAIR, { chern: 'voso' }), req: SVOI, a: Object.assign({}, A_FAIR, { kin: 'o' }) },
+    'честный III, остаётся по вечерам': { find: true, v: Object.assign({}, FAIR, { chern: 'voso' }), req: SVOI, a: A_FAIR, b: B_HONEST },
+    'честный III, уходит домой вовремя': { find: true, v: Object.assign({}, FAIR, { chern: 'voso' }), req: SVOI, a: Object.assign({}, A_FAIR, { stay: false }), b: B_PROT },
+    'честный III, тесть — вторая, дата 14-м': { find: true, v: Object.assign({}, FAIR, { chern: 'voso' }), req: SVOI, a: Object.assign({}, A_FAIR, { kin: '2', date: '14' }), b: B_PROT },
+    'компромисс III: оправданных — во вторую': { find: true, v: Object.assign({}, MID, { chern: 'voso' }), req: SVOI, a: Object.assign({}, A_FAIR, { soft: true, kin: '2', date: '14' }), b: B_DENY },
+    'честный III, отвод за тестя': { find: true, v: Object.assign({}, FAIR, { chern: 'voso' }), req: SVOI, a: Object.assign({}, A_FAIR, { kin: 'o' }), b: B_HONEST },
     'честный с отказом': { find: true, v: Object.assign({}, FAIR, { selkor: 'vstop' }) },
-    'знающий каратель': { find: true, v: HARSH, req: SVOI, a: A_HARSH },
+    'знающий каратель': { find: true, v: HARSH, req: SVOI, a: A_HARSH, b: B_DENY },
     'честный, Черных в трибунал': { find: true, v: Object.assign({}, FAIR, { chern: 'v193' }), a: A_FAIR },
     'спасти Черных': { find: true, v: Object.assign({}, FAIR, { sychev: 'v587', lomov: 'vkr' }), a: A_FAIR },
-    'середняк': { find: true, v: MID, a: A_MID },
+    'середняк': { find: true, v: MID, a: A_MID, b: B_PROT, req: { pesk: ['r_pap'] } },
     'мягкий': { find: true, v: Object.assign({}, FAIR, { zuev: 'v82' }) },
   };
 
   async function reset() {
     for (let i = 0; i < 8; i++) {
       if (q('[data-act=new]')) break;
-      const b = q('[data-act=totitle]') || q('[data-act=afterv]') || q('[data-act=close]') || q('[data-act=restart]') || q('[data-act=menu]') || q('[data-act=todesk]') || q('[data-act=guideok]');
+      const b = q('[data-act=done]') || q('[data-act=totitle]') || q('[data-act=afterv]') || q('[data-act=close]') || q('[data-act=restart]') || q('[data-act=menu]') || q('[data-act=todesk]') || q('[data-act=guideok]');
       if (b) b.click();
       await wait(30);
     }
@@ -124,6 +130,37 @@
     return st().trust;
   }
 
+  /* акт IV: жалобы, ответы родственникам, допрос */
+  const B_DEF = { rv: 'keep', dead: 'lie', stance: 'part', wit: true };
+  async function runReview(id, b) {
+    const cs = CASES[id];
+    click('.folder[data-arg=' + id + ']');
+    let vid;
+    if (cs.statement) {
+      if (b.wit) qa('[data-act=req]').filter(r => !r.disabled).forEach(r => r.click());
+      click('[data-act=dbg][data-arg=all]');
+      vid = b.stance;
+    } else if (cs.rx) vid = b.dead === 'truth' ? 'truth' : 'lie';
+    else {
+      click('[data-act=dbg][data-arg=all]');
+      vid = typeof b.rv === 'function' ? b.rv(id) : b.rv;
+      if (vid === 'prot') qa('.finds .bx').filter(x => x.textContent === 'восстановить' && cs.findings[x.dataset.arg].kind === 'ex').map(x => x.dataset.arg).forEach(f => click('[data-act=strike][data-arg=' + f + ']'));
+    }
+    const v = cs.verdicts.find(x => x.id === vid);
+    click('[data-act=pickv][data-arg=' + vid + ']');
+    qa('.finds .bx').filter(x => x.textContent === 'вычеркнуть').map(x => x.dataset.arg).forEach(f => click('[data-act=strike][data-arg=' + f + ']'));
+    const c = st().cases[id];
+    (v.grounds || []).filter(f => c.found.includes(f) && !c.struck.includes(f) && !c.att.includes(f))
+      .sort((a, b2) => (cs.findings[b2].w || 2) - (cs.findings[a].w || 2)).slice(0, 3)
+      .forEach(f => click('[data-act=attach][data-arg=' + f + ']'));
+    click('[data-act=sign]');
+    await wait(950);
+    const t = st().trust;
+    click('[data-act=afterv]');
+    if (q('.end')) return 'end';
+    return t;
+  }
+
   async function run(name) {
     const sg = STRATS[name], trust = [];
     await reset();
@@ -131,7 +168,10 @@
     outer:
     for (let d = 0; d < DAYS.length; d++) {
       click('[data-act=todesk]');
-      for (const id of DAYS[d].cases) {
+      const today = (st().picked || {})[DAYS[d].id] || DAYS[d].cases;
+      for (const id of today) {
+        if (CASES[id].ro) continue;
+        if (CASES[id].review || CASES[id].rx || CASES[id].fromCard || CASES[id].statement) { const t = await runReview(id, sg.b || B_DEF); if (t === 'end' || q('.end')) { end = st().ending; break outer; } trust.push('{' + t + '}'); continue; }
         if (CASES[id].album) { const t = await runAlbum(id, sg.a); if (t != null) trust.push('[' + t + ']'); if (q('.end')) { end = st().ending; break outer; } continue; }
         const cs = CASES[id], v = cs.verdicts.find(x => x.id === sg.v[id]);
         click('.folder[data-arg=' + id + ']');
@@ -162,7 +202,8 @@
       }
     }
     const s = st();
-    return { name, trust: trust.join(' '), end, viol: s.viol, blind: s.blind, cover: s.cover, stretch: s.stretch, fam: s.fam, proxy: s.proxy || 0,
+    if (end && q('[data-act=epi]')) { click('[data-act=epi]'); if (!q('.epi-list')) end += ' (нет эпилога)'; }
+    return { name, trust: trust.join(' '), end, net: s.net, guilt: typeof GUILT === 'function' && s.day >= 11 ? GUILT(s).g : '', viol: s.viol, blind: s.blind, cover: s.cover, stretch: s.stretch, fam: s.fam, proxy: s.proxy || 0,
       board: s.board ? s.board.me + '/' + s.board.pesk : '',
       flags: s.flags.filter(f => /review|named|testified|chern_|zina_|lavrov|divorced|nina|date|backdate/.test(f)).join(' ') };
   }
