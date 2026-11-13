@@ -713,3 +713,8 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; }
 .epi-list ol { margin: 0; padding-left: 22px; max-height: 340px; overflow: auto; scrollbar-width: thin; }
 .epi-list li { padding: 3px 0; border-bottom: 1px solid rgba(42,34,26,.2); }
 .epi-list li span { font-weight: 700; } .epi-list li em { display: block; font: italic 13px var(--serif); }
+
+/* штамп и карандашная отметка ложатся под текст, а не на него */
+.doc.stamped { padding-bottom: 62px; }
+.doc.stamped .desk-stamp { bottom: 14px; }
+.doc.stamped .pmark { bottom: 12px; }

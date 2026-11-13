@@ -365,7 +365,8 @@
       const key = d.id + '.' + l.id;
       return `<div class="ln${l.fresh ? ' fresh' : ''}" data-k="${key}">${l.k ? `<span class="k">${esc(l.k)}:</span> ` : ''}<span class="v">${T(l.v)}</span></div>`;
     }).join('');
-    return `<div class="doc ${d.kind}${c.fresh.includes(d.id) ? ' new' : ''}" data-doc="${d.id}" style="left:${p.x}px;top:${p.y}px;z-index:${p.z};--r:${rot}deg">
+    const marked = d.face && ((c.verdict && cs.verdicts.length) || mark);
+    return `<div class="doc ${d.kind}${c.fresh.includes(d.id) ? ' new' : ''}${marked ? ' stamped' : ''}" data-doc="${d.id}" style="left:${p.x}px;top:${p.y}px;z-index:${p.z};--r:${rot}deg">
       ${ld >= 0 ? `<span class="ld">${ld * 3 + 2}</span>` : ''}<div class="doc-head">${d.org ? `<div class="doc-org">${esc(d.org)}</div>` : ''}
         <div class="doc-title">${esc(d.title)}</div>${d.sub ? `<div class="doc-sub">${T(d.sub)}</div>` : ''}</div>
       ${d.face ? `<div class="face">${portraitSVG(person.face, cs.no)}</div>` : ''}
@@ -811,6 +812,8 @@
   }
 
   /* ---------- эпилог: 1956, комиссия по пересмотру читает ваши справки ---------- */
+  /* кто из отпущенных потом оказался в последнем списке (акт III) */
+  let LATER = {};
   const NOREHAB = ['zuev', 'yama', 'lomov', 'sychev', 'hrom', 'shev', 'sych2'];
   function epiRow(name, cls, key, freed, no) {
     let h = 0; for (const ch of key) h = (h * 31 + ch.charCodeAt(0)) % 997;
@@ -823,11 +826,12 @@
     }
     if (cls === 'void') return 'Дело прекращено в 1939 г. Жив.';
     if (cls === 'ret') return 'Освобождён в 1939 г. при пересмотре.';
-    return 'Дело прекращено. В 1956 г. жив.';
+    return LATER[key] ? 'Дело прекращено. Дальше — см. последний список.' : 'Дело прекращено. В 1956 г. жив.';
   }
   const fateCls = t => /высшая мера|расстрел/i.test(t) ? 'exec' : /ИТЛ|лишения свободы|лагер|Особое совещание|колони/i.test(t) ? 'camp' : 'free';
   function renderEpi() {
-    const rows = [];
+    const rows = [], back = { leb: 'selkor', chern2: 'chern', bort2: 'ochered', sin2: 'sinits', kotova2: 'zina', demin2: 'demin', sych2: 'sychev' };
+    LATER = {}; ((rt('alb4').ids) || []).forEach(x => { if (back[x]) LATER[back[x]] = true; });
     S.cards.forEach(k => {
       if (k.alb) {
         const a = CASES[k.alb], c = rt(k.alb);

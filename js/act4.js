@@ -333,7 +333,10 @@ const FILE_DOCS = [
     L('date', null, s => F(s, 'backdated') || F(s, 'pesk_backdate') ? 'Список № 58 датирован {name} четырнадцатым ноября — через сутки после остановки троек.' : ''),
     L('chern', null, s => F(s, 'testified') ? 'По делу Черных {name} дал показания против своего наставника.' : ''),
     L('kin', null, s => KIN_MINE(s) ? 'Дело тестя, Лаврова А. П., решал сам, отвода не заявлял.' : ''),
-    L('beat', null, s => V(s, 'hlyst') === 'v1' ? 'Справку на Хлыстова {name} направил на тройку, ' + (F(s, 'beat_known') ? 'зная о справке санчасти.' : 'не прочитав справки санчасти.') : '') ] },
+    L('beat', null, s => V(s, 'hlyst') === 'v1' ? 'Справку на Хлыстова {name} направил на тройку, ' + (F(s, 'beat_known') ? 'зная о справке санчасти.' : 'не прочитав справки санчасти.') : ''),
+    L('str2', null, s => (s.stretch || 0) >= 3 ? 'Обвинения по ' + s.stretch + ' делам {name} строил на одних косвенных уликах.' : ''),
+    L('blind', null, s => (s.blind || 0) >= 25 ? 'Справки на тройку {name} подписывал не читая: в ' + s.blind + ' случаях оправдание лежало в деле и не было найдено.' : ''),
+    L('named', null, s => F(s, 'peskarev_named') ? 'В апреле 1937 г. {name} пытался опорочить следствие по делу группы Лебедева, приобщив к делу клевету на меня.' : '') ] },
   { id: 'arc', kind: 'typed', title: 'Из архивных дел', sub: 'выписки, сделанные бригадой', lines: [
     L('leb', null, s => STRUCK_EX(s, 'selkor') ? 'Дело № 512: в справке вычеркнуто рукой {name}: «20 августа Лебедев был на конференции в областном центре».' : 'Дело № 512: справка об алиби в деле есть; не вычеркнута, но и не учтена.'),
     L('n', null, s => 'Всего в справках {name} вычеркнуто оправданий: ' + ALL_STRUCK(s) + '.'),
@@ -406,7 +409,7 @@ CASES.self = { statement: true, no: '—', title: 'Ваше дело', charge: '
     if: w.ok, off: w.off, hide: s => !w.was(s) })),
   pairs: [
     { a: 'q.leb', b: 'arc.leb', f: 'c_leb' }, { a: 'q.leb', b: 'rep.leb', f: 'c_leb' },
-    { a: 'q.str', b: 'arc.n', f: 'c_str' }, { a: 'q.str', b: 'rep.str', f: 'c_str' },
+    { a: 'q.str', b: 'arc.n', f: 'c_str' }, { a: 'q.str', b: 'rep.str', f: 'c_str' }, { a: 'q.str', b: 'rep.str2', f: 'c_str' }, { a: 'q.str', b: 'rep.blind', f: 'c_str' },
     { a: 'q.date', b: 'rep.date', f: 'c_date' },
     { a: 'q.chern', b: 'rep.chern', f: 'c_chern' },
     { a: 'q.kin', b: 'rep.kin', f: 'c_kin' }, { a: 'q.kin', b: 'ank.kin', f: 'c_kin' },
@@ -455,6 +458,8 @@ function GUILT(s) {
   r += add(f('testified') ? 2 : 0, 'Черных');
   r += add(V(s, 'hlyst') === 'v1' ? (f('beat_known') ? 2 : 1) : 0, 'Хлыстов');
   r += add(KIN_MINE(s) ? 1 : 0, 'тесть');
+  r += add((s.stretch || 0) >= 8 ? 2 : (s.stretch || 0) >= 3 ? 1 : 0, 'натяжки');
+  r += add((s.blind || 0) >= 25 ? 1 : 0, 'поверхностно');
   if (f('pap_hidden') && f('pesk_shot')) { r = Math.floor(r / 2); parts.push('без папки Пескарёва: вдвое'); }
   let g = r;
   (s.file || []).forEach(x => { g += add(x.k === 'drawer' ? (REPORT_CASES.includes(x.id.replace(/^rv_/, '')) ? 2 : 0) : (SHEET_W[x.k] || 0), FILE_SHORT[x.k] || x.k); });
