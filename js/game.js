@@ -14,7 +14,7 @@
 
   const $ = (q, el) => (el || document).querySelector(q);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-  const fill = t => String(typeof t === 'function' ? t(S) : t).replace(/\{name\}/g, S.name);
+  const fill = t => String(typeof t === 'function' ? t(S) : t).replace(/\{name\}/g, S.name).replace(/\{home\}/g, S.homeAt || '');
   const T = t => esc(fill(t));
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const sgn = n => (n > 0 ? '+' : '') + n;
@@ -24,14 +24,22 @@
     return { v: 2, name, day: 0, phase: 'guide', step: 0, trust: 5, viol: 0, blind: 0, cover: 0, stretch: 0, flags: [], time: 0, cases: {}, cards: [], cur: null, ending: null };
   }
   function save() { try { localStorage.setItem(SAVE, JSON.stringify(S)); } catch (e) { /* без хранилища играем до закрытия вкладки */ } }
-  function load() { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (!s || s.v !== 2) return null; s.stretch = s.stretch || 0; return s; } catch (e) { return null; } }
+  function load() { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (!s || s.v !== 2) return null; s.stretch = s.stretch || 0; s.evn = s.evn || []; return s; } catch (e) { return null; } }
   function wipe() { try { localStorage.removeItem(SAVE); } catch (e) { /* нечего стирать */ } }
   const day = () => DAYS[S.day];
   const rt = id => S.cases[id] || (S.cases[id] = { found: [], struck: [], att: [], unlocked: [], fresh: [], hits: [], verdict: null, refused: 0, pos: {} });
-  const timeLeft = () => day().minutes - S.time;
-  const spend = m => { S.time = Math.min(day().minutes, S.time + m); };
+  /* после 18:00 можно остаться до 23:00 (акт III): сверхурочные */
+  const OTMIN = 300;
+  const limit = () => day().minutes + (S.ot ? OTMIN : 0);
+  const timeLeft = () => limit() - S.time;
+  const spend = m => { S.time = Math.min(limit(), S.time + m); };
+  /* после бессонной ночи промах стоит дороже */
+  const missCost = () => COST.miss + (S.tiredDay ? 15 : 0);
+  const F = f => S.flags.includes(f);
+  const flag = f => { if (f && !S.flags.includes(f)) S.flags.push(f); };
   const hhmm = m => { const t = 9 * 60 + m; return Math.floor(t / 60) + ':' + String(t % 60).padStart(2, '0'); };
-  const allDone = () => day().cases.every(id => rt(id).verdict);
+  /* списки на тройку не держат день: не подписал — досдаст Пескарёв */
+  const allDone = () => day().cases.every(id => CASES[id].album || rt(id).verdict);
   const wOf = (cs, f) => cs.findings[f].w || 2;
   /* вес подшитых оснований, относящихся к решению: прямая улика — 2, косвенная — 1 */
   function score(cs, c, v) {
@@ -81,6 +89,50 @@
     for (let i = 0; i <= S.day; i++) if ((DAYS[i].act || 1) === (day().act || 1)) DAYS[i].directives.forEach(d => lines.push({ id: d.id, k: null, v: d.t, fresh: i === S.day }));
     return { id: 'dir', kind: 'dir', title: 'Памятка уполномоченного', sub: 'для служебного пользования', lines };
   }
+  /* ---------- списки на тройку и альбомы ---------- */
+  const isAlb = id => !!(id && CASES[id] && CASES[id].album);
+  const REDO = {};
+  /* справка, вернувшаяся с доследования: те же строки плюс протокол Пескарёва с признанием */
+  function cardById(id) {
+    if (REDO[id]) return REDO[id];
+    const base = ALBCARDS[id.replace(/~r$/, '')];
+    if (!id.endsWith('~r')) return base;
+    return (REDO[id] = Object.assign({}, base, { id, redo: true, pr: 1,
+      lines: base.lines.concat([L('dop', 'Доследовано', base.dop || 'дополнительно допрошен ст. уполномоченным Пескарёвым; вину признал полностью, назвал соучастников')]),
+      pairs: (base.pairs || []).concat([{ a: 'k.dop', b: 'k.kom', f: 'f_dop' }, { a: 'k.dop', b: 'k.src', f: 'f_dop' }]),
+      findings: Object.assign({}, base.findings, { f_dop: { kind: 'in', w: 1, t: 'После доследования признал вину (протокол Пескарёва).' } }) }));
+  }
+  /* состав списка фиксируется при первом взгляде на него: свои справки, условные (вернулись старые знакомые) и возвращённые из прошлого списка */
+  function albIds(id) {
+    const a = CASES[id], c = rt(id);
+    if (!c.ids) {
+      c.ids = a.cards.filter(k => !k.if || k.if(S)).map(k => k.id);
+      /* возвращённые на доследование приходят в следующий список один раз; второй возврат дальше не идёт */
+      if (a.from) { const p = rt(a.from); (p.ids || []).forEach(x => { if ((p.eff || {})[x] === 'r' && !x.endsWith('~r')) c.ids.push(x + '~r'); }); }
+      c.marks = c.marks || {}; c.cf = c.cf || {}; c.sel = c.sel || c.ids[0];
+    }
+    return c.ids;
+  }
+  const curCard = () => { albIds(S.cur); return cardById(rt(S.cur).sel); };
+  const cardRt = id => { const c = rt(S.cur); c.cf = c.cf || {}; return c.cf[id] || (c.cf[id] = { found: [], hits: [], unlocked: [] }); };
+  const shortName = n => { const p = n.split(' '); return p[0] + ' ' + (p[1] ? p[1][0] + '.' : '') + (p[2] ? ' ' + p[2][0] + '.' : ''); };
+  const MK = { 1: 'I', 2: 'II', r: 'дослед.', o: 'отвод' };
+  function cardDocs(a, k, cc) {
+    const docs = [{ id: 'k', kind: 'form', org: day().org || ORG, title: 'Справка', sub: 'на арестованного — для ' + a.court.replace(/^Тройка/, 'тройки').replace(/^Комиссия/, 'Комиссии').replace(/^Особая тройка/, 'Особой тройки'), face: true, lines: k.lines }];
+    if (k.app && cc.unlocked.includes('p')) docs.push({ id: 'p', kind: 'typed', title: k.app.title, sub: k.app.sub, lines: k.app.lines });
+    return docs;
+  }
+  /* что сейчас лежит на столе: для обычного дела — само дело, для списка — текущая справка с приложением */
+  function ctx() {
+    const cs = CASES[S.cur], c = rt(S.cur);
+    if (!cs.album) return { cs, c, docs: visibleDocs(S.cur) };
+    const k = curCard(), cc = cardRt(k.id), docs = cardDocs(cs, k, cc);
+    return { alb: cs, card: k, cc,
+      cs: { no: cs.no, docs, pairs: k.pairs || [], findings: k.findings || {}, person: k.person, requests: [], verdicts: [] },
+      c: { found: cc.found, hits: cc.hits, unlocked: cc.unlocked, pos: c.pos, fresh: c.fresh, struck: [], att: [], verdict: c.signed ? 'signed' : null },
+      docs: docs.concat([dirDoc()]) };
+  }
+
   function visibleDocs(id) {
     const c = rt(id);
     return CASES[id].docs.filter(d => !d.locked || c.unlocked.includes(d.id)).concat([dirDoc()]);
@@ -88,9 +140,14 @@
 
   /* начало дня: день может начаться позже или с выговором — расплата за прошлые решения (DAYS[].start) */
   function beginDay() {
-    S.time = 0; S.cur = null; S.phase = 'brief';
+    S.time = 0; S.cur = null; S.phase = 'brief'; S.ot = false; S.tiredDay = false; S.evn = [];
     const d = day(), was = S.trust;
     S.note = (d.start ? d.start(S) : null) || [];
+    if (S.tired && d.ot) {
+      S.time = 90; S.tiredDay = true;
+      S.note.push('Вчера вы ушли из управления после девяти вечера и легли за полночь. Пришли к половине одиннадцатого. Голова тяжёлая: промах в сверке сегодня обходится дороже.');
+    }
+    S.tired = false;
     S.trust = clamp(S.trust, 1, 10);
     S.tnote = S.trust !== was ? [was, S.trust] : null;
   }
@@ -117,7 +174,7 @@
           <button class="btn" data-act="new">Новая игра</button>
         </div>
       </div>
-      <div class="title-foot">Пролог, акты первый и второй · 1934–1937${DBG ? ' · режим отладки (F2)' : ''}</div>
+      <div class="title-foot">Пролог и три акта · 1934–1938${DBG ? ' · режим отладки (F2)' : ''}</div>
     </div>`;
   }
 
@@ -198,7 +255,9 @@
 
   function renderBar() {
     const left = timeLeft();
-    $('#clock').innerHTML = `<b>${hhmm(S.time)}</b> <i>${left > 0 ? 'рабочий день до ' + hhmm(day().minutes) : 'рабочий день окончен'}</i>`;
+    const over = S.ot && S.time >= day().minutes;
+    $('#clock').innerHTML = `<b>${hhmm(S.time)}</b> <i>${left > 0 ? (over ? 'сверхурочно, до ' : 'рабочий день до ') + hhmm(limit()) : 'рабочий день окончен'}</i>`;
+    $('#clock').classList.toggle('over', over);
     $('#clock').classList.toggle('late', left <= 60);
     const words = S.trust >= 8 ? 'на хорошем счету' : S.trust >= 5 ? 'претензий нет' : S.trust >= 3 ? 'есть вопросы' : 'на карандаше';
     let pips = ''; for (let i = 0; i < 10; i++) pips += `<s class="${i < S.trust ? 'on' : ''}"></s>`;
@@ -210,12 +269,24 @@
     let h = '<h3>Входящие</h3>';
     d.cases.forEach(id => {
       const cs = CASES[id], c = rt(id);
+      if (cs.album) {
+        const ids = albIds(id), mk = ids.filter(x => c.marks[x]).length;
+        const st = c.signed ? (c.by === 'pesk' ? 'досдал Пескарёв' : 'подписан') : S.cur === id ? 'на столе' : mk ? `отмечено ${mk} из ${ids.length}` : `справок: ${ids.length}`;
+        h += `<button class="folder list${S.cur === id ? ' cur' : ''}${c.signed ? ' done' : ''}${cs.final ? ' red' : ''}" data-act="open" data-arg="${id}">
+          <span class="f-no">${esc(cs.kindNo || 'Список')} № ${cs.no}</span><span class="f-t">${esc(cs.title)}</span><span class="f-c">${esc(cs.charge)}</span><span class="f-st">${st}</span>${c.signed ? `<span class="f-stamp">${c.void ? 'НЕ РАССМОТРЕН' : esc(cs.stamp || 'НА ТРОЙКУ')}</span>` : ''}</button>`;
+        return;
+      }
       const st = c.verdict ? 'сдано' : (S.cur === id ? 'на столе' : (c.found.length || c.unlocked.length ? 'в работе' : 'новое'));
       h += `<button class="folder${S.cur === id ? ' cur' : ''}${c.verdict ? ' done' : ''}${cs.finale ? ' red' : ''}" data-act="open" data-arg="${id}">
         <span class="f-no">Дело № ${cs.no}</span><span class="f-t">${esc(cs.title)}</span><span class="f-c">${esc(cs.charge)}</span><span class="f-st">${st}</span>${c.verdict ? `<span class="f-stamp">${esc(cs.verdicts.find(x => x.id === c.verdict).stamp)}</span>` : ''}</button>`;
     });
-    if (allDone()) h += '<button class="btn wide" data-act="endday">Сдать дела. Конец дня</button>';
-    const note = (S.cur && !rt(S.cur).verdict && CASES[S.cur].note) || d.note;
+    /* остаться можно, когда до конца дня меньше часа: проверка справки дольше */
+    if (d.ot && timeLeft() < 60 && !S.ot) h += `<button class="slip stay" data-act="stay"><b>Остаться на вечер</b><span>до 23:00 — чтобы проверить справки самому</span></button>`;
+    const open = d.cases.filter(id => CASES[id].album && !rt(id).signed).length;
+    if (allDone()) h += `<button class="btn wide" data-act="endday">${d.ot && (open || S.time > d.minutes) ? 'Уйти домой' : 'Сдать дела. Конец дня'}${open ? '<small>неподписанный список досдаст Пескарёв</small>' : ''}</button>`;
+    if (d.act >= 3 && S.board) h += `<div class="board"><b>Доска оперсектора</b><span>Пескарёв <i>${S.board.pesk}</i></span><span>${esc(S.name)} <i>${S.board.me}</i></span></div>`;
+    const kn = S.cur && isAlb(S.cur) && !rt(S.cur).signed && curCard().note;
+    const note = (kn && fill(kn)) || (S.cur && !rt(S.cur).verdict && CASES[S.cur].note) || d.note;
     h += `<div class="sticky">${esc(note)}</div>`;
     if (S.trust <= 2 && !allDone()) h += `<div class="sticky warnnote">${esc(d.warn || 'Ломов спрашивал у Зинаиды Павловны, где лежат обходные листы. Про тебя спрашивал. Ещё одна бумага ему поперёк — и стол освободишь. — И. С.')}</div>`;
     $('#inbox').innerHTML = h;
@@ -258,11 +329,11 @@
     });
   }
 
-  function docHTML(d, c, person) {
+  function docHTML(d, c, person, cs, mark) {
     const p = c.pos[d.id];
     let hash = 0; for (const ch of d.id + S.cur) hash = (hash * 31 + ch.charCodeAt(0)) % 997;
     const rot = ((hash % 7) - 3) * 0.3;
-    const ld = CASES[S.cur].docs.findIndex(x => x.id === d.id);
+    const ld = cs.docs.findIndex(x => x.id === d.id);
     const lines = d.lines.map(l => {
       const key = d.id + '.' + l.id;
       return `<div class="ln${l.fresh ? ' fresh' : ''}" data-k="${key}">${l.k ? `<span class="k">${esc(l.k)}:</span> ` : ''}<span class="v">${T(l.v)}</span></div>`;
@@ -270,9 +341,10 @@
     return `<div class="doc ${d.kind}${c.fresh.includes(d.id) ? ' new' : ''}" data-doc="${d.id}" style="left:${p.x}px;top:${p.y}px;z-index:${p.z};--r:${rot}deg">
       ${ld >= 0 ? `<span class="ld">${ld * 3 + 2}</span>` : ''}<div class="doc-head">${d.org ? `<div class="doc-org">${esc(d.org)}</div>` : ''}
         <div class="doc-title">${esc(d.title)}</div>${d.sub ? `<div class="doc-sub">${T(d.sub)}</div>` : ''}</div>
-      ${d.face ? `<div class="face">${portraitSVG(person.face, CASES[S.cur].no)}</div>` : ''}
+      ${d.face ? `<div class="face">${portraitSVG(person.face, cs.no)}</div>` : ''}
       <div class="doc-body">${lines}</div>
-      ${d.face && c.verdict ? `<div class="stamp desk-stamp${ui.slam ? ' slam' : ''}">${esc(CASES[S.cur].verdicts.find(x => x.id === c.verdict).stamp)}</div>` : ''}</div>`;
+      ${d.face && c.verdict && cs.verdicts.length ? `<div class="stamp desk-stamp${ui.slam ? ' slam' : ''}">${esc(cs.verdicts.find(x => x.id === c.verdict).stamp)}</div>` : ''}
+      ${d.face && mark ? `<div class="pmark">${esc(mark)}</div>` : ''}</div>`;
   }
 
   function renderSurface() {
@@ -282,13 +354,20 @@
       sf.innerHTML = `<div class="baize"></div>${deskProps()}<div class="empty-hint">${allDone() ? 'Все папки сданы.' : 'Возьмите папку из «Входящих».'}</div>`;
       return;
     }
-    const cs = CASES[S.cur], c = rt(S.cur), docs = visibleDocs(S.cur);
+    const X = ctx(), cs = X.cs, c = X.c, docs = X.docs;
     const first = !Object.keys(c.pos).length;
     place(c, docs);
     ui.z = Math.max(ui.z, ...Object.values(c.pos).map(p => p.z));
+    let strip = `<b>Дело № ${cs.no}</b> · ${esc(CASES[S.cur].person ? CASES[S.cur].person.name : '')} · ${esc(CASES[S.cur].charge)}${c.verdict ? ' · сдано, только чтение' : ''}`;
+    let mark = null;
+    if (X.alb) {
+      const ids = albIds(S.cur), m = rt(S.cur).marks[X.card.id];
+      mark = m ? (m === 'o' ? 'отвод' : m === 'r' ? 'на доследование' : MK[m] + ' кат.') : null;
+      strip = `<b>${esc(X.alb.kindNo || 'Список')} № ${X.alb.no}</b> · справка ${ids.indexOf(X.card.id) + 1} из ${ids.length} · ${esc(X.card.person.name)}${c.verdict ? ' · подписан, только чтение' : ''}`;
+    }
     sf.innerHTML = `<div class="baize"></div>${deskProps()}
-      <div class="case-strip"><b>Дело № ${cs.no}</b> · ${esc(cs.person.name)} · ${esc(cs.charge)}${c.verdict ? ' · сдано, только чтение' : ''}</div>
-      ${docs.map(d => docHTML(d, c, cs.person)).join('')}
+      <div class="case-strip">${strip}</div>
+      ${docs.map(d => docHTML(d, c, cs.person, cs, mark)).join('')}
       <button class="tidy-btn${c.verdict ? ' solo' : ''}" data-act="tidy" title="Разложить бумаги по столу (R)">Разложить</button>
       ${c.verdict ? '' : `<button class="sv-btn" data-act="sverka">Сверка <kbd>пробел</kbd></button>`}`;
     if (first) pack();
@@ -296,7 +375,7 @@
   }
   function markLines() {
     const sf = $('#surface'); if (!sf || !S.cur) return;
-    const c = rt(S.cur), cs = CASES[S.cur], on = ui.sverka && !c.verdict;
+    const X = ctx(), c = X.c, cs = X.cs, on = ui.sverka && !c.verdict;
     sf.classList.toggle('sverka', on);
     sf.classList.toggle('dbg-on', DBG);
     const b = $('.sv-btn', sf); if (b) { b.classList.toggle('on', on); b.classList.toggle('pulse', !S.flags.includes('tut_sv')); }
@@ -366,7 +445,41 @@
     </div>`;
   }
 
+  /* список на тройку справа: строки с карандашными отметками, справка по текущей фамилии, отметка, подпись */
+  function albumSide() {
+    const a = CASES[S.cur], c = rt(S.cur), ids = albIds(S.cur), k = curCard(), cc = cardRt(k.id), ro = !!c.signed;
+    const rows = ids.map((id, i) => {
+      const x = cardById(id), m = c.marks[id];
+      return `<li class="${id === k.id ? 'cur' : ''}${x.redo ? ' redo' : ''}" data-act="card" data-arg="${id}"><span class="n">${i + 1}.</span><span class="nm">${esc(shortName(x.person.name))}</span><span class="pr">${x.pr === 1 ? 'I' : 'II'}</span><span class="mk${m === 'r' || m === 'o' ? ' soft' : ''}">${m ? MK[m] : ''}</span></li>`;
+    }).join('');
+    const cnt = v => ids.filter(x => c.marks[x] === v).length;
+    const fnd = cc.found.map(f => { const fd = k.findings[f]; return `<li class="${fd.kind}"><span class="tag">${fd.kind === 'ex' ? 'в пользу' : 'уличает'}</span><span class="ft">${T(fd.t)}</span></li>`; }).join('')
+      || `<li class="none">${cc.unlocked.includes('p') ? 'Сверкой пока ничего не установлено.' : 'Проверка не запрашивалась.'}</li>`;
+    const late = timeLeft() < (k.cost || 40) + COST.hit;
+    const req = !ro && k.app && !cc.unlocked.includes('p')
+      ? `<div class="slips"><button class="req" data-act="areq" ${late ? 'disabled' : ''}><em>Запрос</em><i>${late ? (day().ot && !S.ot ? 'только вечером' : 'не успеть') : hm(k.cost || 40)}</i><b>${esc(k.app.req || 'Проверить по месту: ' + k.app.title)}</b><span>Без проверки в справке только то, что написал Пескарёв.</span></button></div>` : '';
+    const m = c.marks[k.id];
+    const opts = [['1', 'Первая категория'], ['2', 'Вторая категория'], ['r', 'Вернуть на доследование']].concat(k.kin ? [['o', 'Заявить отвод: обвиняемый — родственник']] : []);
+    const pick = ro ? '' : `<div class="blank amark"><p class="bl-t">Справка № ${ids.indexOf(k.id) + 1}. Предложено: <b>${k.pr === 1 ? 'первая' : 'вторая'} категория</b> <i>(Пескарёв)</i></p>
+      <p class="bl-t"><b>Отметка</b> <i>(нужное подчеркнуть)</i>:</p>
+      <div class="vlist">${opts.map(o => `<button class="vopt${m === o[0] ? ' on' : ''}" data-act="amark" data-arg="${o[0]}"><span>${o[1]}</span></button>`).join('')}</div></div>`;
+    const all = ids.every(x => c.marks[x]);
+    let sig;
+    if (ro) sig = `<div class="sigline done"><i>${c.by === 'pesk' ? 'за ' + esc(S.name) + ' — Пескарёв' : esc(S.name)}</i><span>${c.void ? 'список не рассмотрен' : 'список подписан' + (c.date ? ', датирован ' + esc(c.date) : '')}</span></div>`;
+    else if (a.final) sig = `<p class="bl-t">Дата под подписью:</p><div class="vlist dates"><button class="vopt" data-act="asign" data-arg="14" ${all ? '' : 'disabled'}><span>14 ноября 1938 г. (как велено)</span></button><button class="vopt" data-act="asign" data-arg="16" ${all ? '' : 'disabled'}><span>16 ноября 1938 г. (сегодня)</span></button></div>${all ? '' : '<p class="pnote">подписать можно, когда отмечены все справки</p>'}`;
+    else sig = `<button class="sigline" data-act="asign" ${all ? '' : 'disabled'}><i>${all ? 'расписаться' : ''}</i><span>${all ? esc(day().rank) + ' — подпись' : 'отмечены не все справки'}</span></button>`;
+    $('#side').innerHTML = `<div class="pile">
+      <div class="alist"><div class="al-h">${esc(a.title)} № ${a.no}</div><div class="al-sub">${esc(a.charge)}</div>
+        <ol>${rows}</ol>
+        <p class="al-t">Лимит на список — ${a.plan}. Отмечено: I — ${cnt('1')}, II — ${cnt('2')}, доследование — ${cnt('r')}${cnt('o') ? ', отвод — ' + cnt('o') : ''}.</p></div>
+      <div class="sprav"><h3>${esc(shortName(k.person.name))}</h3><ul class="finds">${fnd}</ul><p class="pnote">проверка — ${k.cost || 40} мин, сверка — ${COST.hit}, мимо — ${missCost()}</p></div>
+      ${req}${pick}
+      <div class="blank asig"><div class="bl-org">${esc(day().org || ORG)}</div><p class="bl-t">Список проверил:</p>${sig}</div>
+    </div>${debugHTML()}`;
+  }
+
   function renderSide() {
+    if (isAlb(S.cur)) return albumSide();
     const el = $('#side');
     if (!S.cur) {
       const d = day();
@@ -408,17 +521,17 @@
 
   /* ---------- сверка ---------- */
   function pick(k) {
-    const c = rt(S.cur), cs = CASES[S.cur];
+    const X = ctx(), c = X.c, cs = X.cs;
     if (!ui.sel) { ui.sel = k; snd('pick'); markLines(); return; }
     if (ui.sel === k) { ui.sel = null; markLines(); return; }
     const a = ui.sel, b = k; ui.sel = null;
     const p = cs.pairs.find(x => (x.a === a && x.b === b) || (x.a === b && x.b === a));
     if (p && c.found.includes(p.f)) { toast('Это уже записано в справке.'); refresh(); return; }
-    if (timeLeft() <= 0) { toast('Рабочий день окончен. Осталось подшить основания и подписать постановления.', 'bad'); refresh(); return; }
+    if (timeLeft() <= 0) { toast(day().ot && !S.ot ? 'Рабочий день окончен. Можно остаться на вечер — слева, под папками.' : 'Время вышло. Осталось подписать то, что есть.', 'bad'); refresh(); return; }
     if (p) {
       c.found.push(p.f); c.hits.push(a, b); spend(COST.hit); snd('hit');
       const fd = cs.findings[p.f];
-      toast((fd.kind === 'ex' ? 'В пользу обвиняемого. ' : 'Уличает. ') + fill(fd.t) + ' Записано в справку — можно подшить к постановлению.', fd.kind);
+      toast((fd.kind === 'ex' ? 'В пользу обвиняемого. ' : 'Уличает. ') + fill(fd.t) + (X.alb ? ' Записано на поле справки.' : ' Записано в справку — можно подшить к постановлению.'), fd.kind);
     } else {
       /* «тепло»: хотя бы одна из строк ещё участвует в ненайденной связке;
          «об одном»: обе строки ведут к одному ненайденному факту, но друг с другом его не устанавливают */
@@ -426,12 +539,12 @@
       const inF = (f, k) => left.some(x => x.f === f && (x.a === k || x.b === k));
       const same = left.some(x => inF(x.f, a) && inF(x.f, b));
       const warm = same || left.some(x => [x.a, x.b].some(k => k === a || k === b));
-      spend(warm ? COST.hit : COST.miss); snd('miss');
+      spend(warm ? COST.hit : missCost()); snd('miss');
       toast(same
         ? 'Обе строки об одном и том же, но друг с другом они ничего не устанавливают. Сверьте каждую с третьей бумагой. Потеряно ' + COST.hit + ' минут.'
         : warm
           ? 'Из этих двух строк вывода не сделать. Но одна из них ещё пригодится — с другой бумагой. Потеряно ' + COST.hit + ' минут.'
-          : 'Ни расхождений, ни связи не усматривается. Потеряно ' + COST.miss + ' минут.', 'bad');
+          : 'Ни расхождений, ни связи не усматривается. Потеряно ' + missCost() + ' минут.', 'bad');
     }
     save(); refresh();
   }
@@ -469,6 +582,7 @@
     const fls = (v.flags || []).concat(c.att.map(f => { const x = cs.findings[f].flag; return typeof x === 'function' ? x(S) : x; }).filter(Boolean));
     fls.forEach(f => { if (!S.flags.includes(f)) S.flags.push(f); });
     c.verdict = v.id; c.founded = founded; c.stretch = stretch;
+    if (S.board && v.board) S.board.me += v.board;
     S.cards.push({ c: S.cur, day: S.day, v: v.id });
     save();
     const lst = (ids, cl) => ids.map(f => `<span class="${cl} ${cs.findings[f].kind}">${T(cs.findings[f].t)}</span>`).join('');
@@ -504,8 +618,78 @@
       <div class="post-foot"><div class="tdelta${S.trust < was ? ' down' : S.trust > was ? ' up' : ''}">Доверие руководства: ${was} → ${S.trust}</div>
         <button class="btn" data-act="afterv">Сдать папку</button></div></div>`); }, 850);
   }
+  /* список подписан (вами или за вас): отметки становятся исходами, лимит — доверием */
+  function settleAlbum(id, by, date) {
+    const a = CASES[id], c = rt(id), ids = albIds(id);
+    if (c.signed) return null;
+    let n1 = 0, n2 = 0, nr = 0, np = 0, rr = 0, extra = 0;
+    c.eff = {};
+    ids.forEach(x => {
+      const k = cardById(x), cc = (c.cf[x] = c.cf[x] || { found: [], hits: [], unlocked: [] });
+      let m = c.marks[x];
+      if (!m) { m = String(k.pr); c.marks[x] = m; (c.pm = c.pm || []).push(x); np++; }
+      const eff = m === 'o' ? String(k.pr) : m, mine = m !== 'o' && !(c.pm || []).includes(x);
+      c.eff[x] = eff;
+      if (eff === '1') n1++; else if (eff === '2') n2++; else { nr++; if (k.redo) rr++; if (k.retCost) extra += k.retCost; }
+      /* осудить невиновного: знал — нарушение, не проверил — вслепую; за отметки Пескарёва — тоже вслепую, подпись ваша */
+      const exs = Object.keys(k.findings || {}).filter(f => k.findings[f].kind === 'ex');
+      if (exs.length && eff !== 'r' && m !== 'o') { if (mine && exs.some(f => cc.found.includes(f))) S.viol++; else S.blind++; }
+      if (k.tag) { flag(k.tag + '_' + (m === 'o' ? 'o' : eff)); if (!mine && m !== 'o') flag(k.tag + '_pesk'); }
+    });
+    const through = n1 + n2, short = Math.max(0, a.plan - through);
+    let delta = short === 0 ? 1 : short <= 2 ? 0 : short <= 5 ? -1 : -2;
+    delta -= extra;
+    c.date = a.final ? (date === '16' ? '16.XI.1938' : '14.XI.1938') : null;
+    if (a.final && date === '16') { c.void = true; delta = -2; flag('honest_date'); }
+    else if (a.final) { S.viol += 3; flag(by === 'pesk' ? 'pesk_backdate' : 'backdated'); }
+    if (!c.void && S.board) S.board.me += through;
+    if (np) S.proxy = (S.proxy || 0) + np;
+    const was = S.trust;
+    S.trust = clamp(S.trust + delta, 0, 10);
+    c.signed = true; c.by = by;
+    const r = c.res = { n1, n2, nr, np, plan: a.plan, through, short, delta, was, now: S.trust, void: !!c.void };
+    S.cards.push({ alb: id, day: S.day });
+    return r;
+  }
+  function albReply(a, r) {
+    const t = a.reply && a.reply(S, r);
+    if (t) return t;
+    if (r.void) return 'Список датирован шестнадцатым. Тройки с шестнадцатого нет. Значит, нет и списка — и всей вашей работы за день. Пескарёв свой датировал четырнадцатым. Запомните это число: я его запомнил.';
+    if (r.short === 0) return 'Список закрыт. Тройка заседает в четверг.';
+    if (r.short === 1) return 'Одного недобрали — ладно. Доследуйте, и чтобы к следующему списку он был.';
+    return `Лимит на список — ${r.plan}. Прошло ${r.through}. Кто будет добирать остальных — Пескарёв? Он доберёт. Только в другой раз не за вас, а вместо вас.`;
+  }
+  function signAlbum(date) {
+    const a = CASES[S.cur], c = rt(S.cur), ids = albIds(S.cur);
+    if (!ids.every(x => c.marks[x])) return;
+    const r = settleAlbum(S.cur, 'me', date);
+    if (!r) return;
+    const d = day();
+    save(); ui.sverka = false; snd('stamp'); refresh(true);
+    const rows = ids.map((x, i) => { const k = cardById(x), m = c.marks[x]; return `<li><span>${i + 1}. ${esc(k.person.name)}</span><b>${m === 'o' ? 'отвод · ' + MK[c.eff[x]] : MK[m]}</b></li>`; }).join('');
+    openModal(`<div class="post-wrap"><div class="sheet post blank alpost">
+      <div class="post-top"><div class="post-res"><i>${T(albReply(a, r))}</i></div>
+        <div class="post-utv"><b>«Утверждаю»</b><span>${esc(d.bossPost || '')}</span><em>${esc(d.boss || '')}</em><span>${esc(c.date || d.date)}</span></div></div>
+      <div class="post-h">${esc(a.title)}</div><div class="post-sub">список № ${a.no} · ${esc(a.court)}</div>
+      <ol class="al-rows">${rows}</ol>
+      <div class="post-sig"><span>${esc(d.rank)}</span><i>${esc(S.name)}</i><span>${esc(c.date || d.date)}</span></div>
+      ${sealSVG(d.seal || '')}<div class="stamp slam">${r.void ? 'НЕ РАССМОТРЕН' : esc(a.stamp || 'НА ТРОЙКУ')}</div></div>
+      <div class="post-foot"><div class="tdelta${r.now < r.was ? ' down' : r.now > r.was ? ' up' : ''}">Доверие руководства: ${r.was} → ${r.now}</div>
+        <button class="btn" data-act="afterv">Сдать список</button></div></div>`);
+  }
+  /* исход строки списка для картотеки */
+  function albFate(a, c, x) {
+    const k = cardById(x), eff = (c.eff || {})[x];
+    if (c.void) return 'Рассмотрение приостановлено директивой от 15.XI.1938. Дело передано в суд в общем порядке.';
+    if (eff === 'r') return k.redo ? 'Возвращено повторно. Содержится во внутренней тюрьме УНКВД.' : 'Возвращено на доследование.';
+    const t = eff === '1' ? (k.fate1 || 'высшая мера. Приговор исполнен.') : (k.fate2 || '10 лет ИТЛ.');
+    return `${a.court}, ${c.date || a.trDate}: ${t}`;
+  }
+
   function afterVerdict() {
     closeModal();
+    if (S.trust <= 0) return ending(day().fired || 'e_fired');
+    if (isAlb(S.cur)) { S.cur = null; save(); return refresh(true); }
     if (S.trust <= 0) return ending(day().fired || 'e_fired');
     S.cur = null; ui.verdict = null; ui.sel = null; save(); refresh(true);
   }
@@ -524,16 +708,20 @@
     const d = day(), letters = (d.paper.letters || []).filter(l => !l.if || l.if(S));
     app.innerHTML = `<div class="evening">
       <div class="ev-head"><span>Вечер. ${esc(d.paper.date)}</span><span>Свежий номер</span></div>
+      ${(S.evn || []).map(t => `<div class="evnote">${T(t)}</div>`).join('')}
       ${paperHTML(d.paper)}
+      ${d.home ? `<div class="sheet home"><div class="kicker">Дома</div>${d.home(S).filter(Boolean).map(p => `<p>${T(p)}</p>`).join('')}</div>` : ''}
       ${letters.map(l => `<div class="letter ${l.hand || ''}"><p>${T(l.t)}</p>${l.foot ? `<div class="l-foot">${esc(l.foot)}</div>` : ''}</div>`).join('')}
       <div class="ev-btns"><button class="btn ghost" data-act="cards">Картотека</button><button class="btn" data-act="next">${d.inter ? esc(INTERS[d.inter].label || 'Месяц спустя') : 'Следующий день'}</button></div>
     </div>`;
     window.scrollTo(0, 0);
   }
 
+  const albCount = id => (rt(id).ids || []).length;
   function archiveBody(years) {
     const struck = Object.values(S.cases).reduce((n, c) => n + c.struck.length, 0);
-    return `<p>За ${esc(years)} через ваш стол прошло ${S.cards.length} дел. Под каждым постановлением стоит одна и та же фамилия: ${esc(S.name)}.</p>
+    const n = S.cards.reduce((t, k) => t + (k.alb ? albCount(k.alb) : 1), 0);
+    return `<p>За ${esc(years)} через ваш стол прошло ${n} дел. Под каждым постановлением стоит одна и та же фамилия: ${esc(S.name)}.</p>
       <p>Папки прошиты, пронумерованы и сданы в архив областного управления. На обложках штамп: «Хранить вечно».</p>
       <p>Справки по делам подшиты как есть${struck ? ' — вместе со всем, что в них вычеркнуто' : ''}.</p>`;
   }
@@ -561,9 +749,9 @@
     let body = e.text.map(p => `<p>${T(p)}</p>`).join('');
     if (e.archive) body = archiveBody(e.archive) + (e.fine ? `<p class="fine">${esc(e.fine)}</p>` : '');
     /* старое сохранение, остановившееся на конце первого акта, можно продолжить */
-    const more = S.ending === 'act1' && DAYS.length > S.day + 1;
+    const more = /^act\d$/.test(S.ending) && DAYS.length > S.day + 1;
     app.innerHTML = `<div class="center-scr"><div class="sheet brief end"><div class="kicker">${esc(e.kicker)}</div><h1>${esc(e.title)}</h1>${body}
-      <div class="ev-btns"><button class="btn ghost" data-act="cards">Картотека</button>${more ? '<button class="btn" data-act="nextact">Акт второй</button>' : ''}<button class="btn${more ? ' ghost' : ''}" data-act="restart">Начать заново</button></div></div></div>`;
+      <div class="ev-btns"><button class="btn ghost" data-act="cards">Картотека</button>${more ? '<button class="btn" data-act="nextact">Следующий акт</button>' : ''}<button class="btn${more ? ' ghost' : ''}" data-act="restart">Начать заново</button></div></div></div>`;
   }
 
   /* ---------- модальные окна ---------- */
@@ -572,6 +760,12 @@
 
   function showCards() {
     const cards = S.cards.map(k => {
+      if (k.alb) {
+        const a = CASES[k.alb], c = rt(k.alb), known = k.day < S.day || S.phase !== 'desk';
+        return `<div class="card alb"><div><b>${esc(a.title)} № ${a.no}</b><span>${esc(DAYS[k.day].date)} · ${esc(a.court)}</span>
+          <i>${c.by === 'pesk' ? 'Подписал за вас: ст. уполномоченный Пескарёв' : 'Подписал: ' + esc(S.name)}${c.date ? ' · дата под подписью ' + esc(c.date) : ''}</i>
+          <ul>${(c.ids || []).map(x => { const p = cardById(x); return `<li><span class="face">${portraitSVG(p.person.face, a.no)}</span><span><b>${esc(p.person.name)}</b><em>${known ? T(albFate(a, c, x)) : 'Исход пока неизвестен.'}</em></span></li>`; }).join('')}</ul></div></div>`;
+      }
       const cs = CASES[k.c], v = cs.verdicts.find(x => x.id === k.v), known = k.day < S.day || S.phase !== 'desk';
       const c = rt(k.c);
       return `<div class="card"><div class="face">${portraitSVG(cs.person.face, cs.no)}</div><div>
@@ -606,6 +800,15 @@
       <p>флаги: ${S.flags.filter(f => f !== 'tut_sv').join(', ') || '—'}</p>
       <div class="dbg-btns"><button data-act="dbg" data-arg="time">время 9:00</button><button data-act="dbg" data-arg="tp">доверие +1</button><button data-act="dbg" data-arg="tm">доверие −1</button>
       ${DAYS.map((d, i) => `<button data-act="dbg" data-arg="day${i}">день ${i + 1}</button>`).join('')}</div>`;
+    if (S.cur && isAlb(S.cur)) {
+      const X = ctx(), a = X.alb, k = X.card, al = rt(S.cur), ids = albIds(S.cur);
+      const ex = ids.filter(x => Object.values(cardById(x).findings || {}).some(f => f.kind === 'ex')).length;
+      h += `<h5>Список № ${a.no} <button data-act="dbg" data-arg="all">найти всё</button></h5><p>лимит ${a.plan} · справок ${ids.length} · с оправданием ${ex} · сверхурочно ${S.ot ? 'да' : 'нет'} · семья ${S.fam == null ? '—' : S.fam} · за вас Пескарёв ${S.proxy || 0}</p>
+        <p>справка: ${esc(k.id)} · предложено ${k.pr}${k.app ? ' · проверка ' + (k.cost || 40) + ' мин' : ' · проверки нет'}${k.tag ? ' · флаг ' + k.tag + '_*' : ''}</p>`;
+      Object.keys(k.findings || {}).forEach(f => { const fd = k.findings[f]; h += `<div class="dbg-f ${fd.kind}${X.cc.found.includes(f) ? ' ok' : ''}"><b>${f}</b> · ${fd.kind === 'ex' ? 'в пользу' : 'уличает'}<i>${T(fd.t)}</i>${(k.pairs || []).filter(p => p.f === f).map(p => `<span>${p.a} ↔ ${p.b}</span>`).join('')}</div>`; });
+      if (!Object.keys(k.findings || {}).length) h += '<p>на этой справке находить нечего</p>';
+      return h + '</div>';
+    }
     if (S.cur) {
       const cs = CASES[S.cur], c = rt(S.cur);
       h += `<h5>Что с чем сверяется <button data-act="dbg" data-arg="all">найти всё</button></h5>
@@ -639,12 +842,19 @@
     if (a === 'time') S.time = 0;
     if (a === 'tp') S.trust = clamp(S.trust + 1, 0, 10);
     if (a === 'tm') S.trust = clamp(S.trust - 1, 1, 10);
+    if (a === 'all' && S.cur && isAlb(S.cur)) {
+      /* в списке отладка находит только то, что уже лежит на столе: проверку надо запросить самому */
+      const X = ctx(), vis = X.docs.map(d => d.id);
+      X.cs.pairs.forEach(p => { if (!X.c.found.includes(p.f) && [p.a, p.b].every(k => vis.includes(k.split('.')[0]))) { X.c.found.push(p.f); X.c.hits.push(p.a, p.b); spend(COST.hit); } });
+      save(); return refresh(true);
+    }
     if (a === 'all' && S.cur) {
       const cs = CASES[S.cur], c = rt(S.cur);
       /* запросы, закрытые условием, и те, что игрок делает только сам (свои показания), отладка не трогает */
-      (cs.requests || []).forEach(r => { if (!c.unlocked.includes(r.doc) && !r.manual && !(r.if && !r.if(S))) c.unlocked.push(r.doc); });
+      /* «найти всё» — как безошибочная сверка: время за каждый факт и за каждый запрос списывается */
+      (cs.requests || []).forEach(r => { if (!c.unlocked.includes(r.doc) && !r.manual && !(r.if && !r.if(S))) { c.unlocked.push(r.doc); spend(r.cost); } });
       const vis = visibleDocs(S.cur).map(d => d.id);
-      cs.pairs.forEach(p => { if (!c.found.includes(p.f) && [p.a, p.b].every(k => vis.includes(k.split('.')[0]))) { c.found.push(p.f); c.hits.push(p.a, p.b); } });
+      cs.pairs.forEach(p => { if (!c.found.includes(p.f) && [p.a, p.b].every(k => vis.includes(k.split('.')[0]))) { c.found.push(p.f); c.hits.push(p.a, p.b); spend(COST.hit); } });
       save(); return refresh(true);
     }
     if (a.startsWith('day')) { S.day = +a.slice(3); beginDay(); save(); return go(); }
@@ -658,11 +868,31 @@
     guideok() { S.phase = 'brief'; save(); go(); },
     guide() { openModal(`<div class="sheet guide-sheet">${guideHTML()}<div class="guide-foot"><span></span><button class="btn" data-act="close">Закрыть</button></div></div>`); },
     todesk() { S.phase = 'desk'; S.cur = null; save(); go(); },
-    open(id) { S.cur = S.cur === id ? null : id; ui.sel = null; ui.verdict = null; snd('folder'); refresh(true); },
+    open(id) { S.cur = S.cur === id ? null : id; ui.sel = null; ui.verdict = null; snd('folder'); refresh(true); save(); },
+    card(id) {
+      const c = rt(S.cur); if (c.sel === id) return;
+      c.sel = id; c.pos = {}; c.fresh = []; ui.sel = null; snd('paper'); save(); refresh(true);
+    },
+    amark(v) {
+      const c = rt(S.cur), k = curCard(); if (c.signed) return;
+      c.marks[k.id] = c.marks[k.id] === v ? undefined : v; snd('clip');
+      if (c.marks[k.id]) { const ids = albIds(S.cur), nx = ids.slice(ids.indexOf(k.id) + 1).concat(ids).find(x => !c.marks[x]); if (nx) { c.sel = nx; c.pos = {}; c.fresh = []; } }
+      save(); refresh(true);
+    },
+    areq() {
+      const k = curCard(), cc = cardRt(k.id), c = rt(S.cur);
+      if (!k.app || cc.unlocked.includes('p') || timeLeft() < (k.cost || 40) + COST.hit) return;
+      spend(k.cost || 40); cc.unlocked.push('p'); c.fresh.push('p');
+      const sf = $('#surface'); c.pos.p = { x: Math.round(sf.clientWidth / 2 - 140), y: 120, z: ++ui.z };
+      save(); refresh(true); snd('knock');
+      toast('Через ' + hm(k.cost || 40) + ' принесли: «' + k.app.title + '». Сверьте со справкой.');
+    },
+    asign(d) { signAlbum(d); },
+    stay() { S.ot = true; snd('knock'); save(); refresh(); toast('Вы остались. Дежурный принёс чай. До одиннадцати вечера вы на месте.'); },
     tidy() { if (!S.cur) return; snd('paper'); pack(); save(); },
     mute() { MUTE = !MUTE; try { localStorage.setItem('chekist.mute', MUTE ? '1' : '0'); } catch (e) { /* не запомнится */ } ACT.menu(); snd('clip'); },
     sverka() {
-      if (!S.cur || rt(S.cur).verdict) return;
+      if (!S.cur || ctx().c.verdict) return;
       ui.sverka = !ui.sverka; ui.sel = null; if (!S.flags.includes('tut_sv')) S.flags.push('tut_sv'); markLines();
     },
     req(id) {
@@ -691,7 +921,27 @@
     },
     sign() { sign(); },
     afterv() { afterVerdict(); },
-    endday() { S.phase = 'evening'; S.cur = null; save(); go(); },
+    endday() {
+      const d = day();
+      S.evn = [];
+      d.cases.forEach(id => {
+        if (!CASES[id].album || rt(id).signed) return;
+        const a = CASES[id], r = settleAlbum(id, 'pesk', '14');
+        S.evn.push(`Список № ${a.no} вы не подписали. Его досдал ст. уполномоченный Пескарёв: ${r.np ? r.np + ' справок он отметил за вас — по своим предложениям, ' : ''}подпись под списком ваша${rt(id).date ? ', дата — ' + rt(id).date : ''}.`);
+        S.evn.push(`«${albReply(a, r)}» — ${d.boss || ''}. Доверие руководства: ${r.was} → ${r.now}.`);
+      });
+      if (d.ot) {
+        S.lateToday = S.time > d.minutes; S.tired = S.time > d.minutes + 180;
+        S.homeAt = hhmm(Math.max(S.time, d.minutes) + 40);
+        if (F('married') && !F('divorced')) S.fam = S.lateToday ? (S.fam || 0) - 1 : Math.min(3, (S.fam || 0) + 1);
+        if (S.board) S.board.pesk += d.peskAdd || 0;
+      }
+      if (d.after) d.after(S);
+      if (F('married') && S.fam <= 0) flag('nina_left');
+      S.phase = 'evening'; S.cur = null; save();
+      if (S.trust <= 0) return ending(d.fired || 'e_fired');
+      go();
+    },
     next() {
       if (day().inter) { S.phase = 'inter'; S.step = 0; }
       else { S.day++; beginDay(); }
@@ -727,7 +977,7 @@
   app.addEventListener('pointerdown', e => {
     const doc = e.target.closest('.surface .doc');
     if (!doc || !S || !S.cur || ui.busy) return;
-    const c = rt(S.cur), id = doc.dataset.doc, p = c.pos[id];
+    const c = ctx().c, id = doc.dataset.doc, p = c.pos[id];
     p.z = ++ui.z; doc.style.zIndex = p.z;
     const fi = c.fresh.indexOf(id); if (fi >= 0) { c.fresh.splice(fi, 1); doc.classList.remove('new'); }
     const ln = e.target.closest('.ln');
